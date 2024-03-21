@@ -17,6 +17,8 @@
 
 package silo
 
+import "strings"
+
 type DataRow map[string]any
 
 type DataNode struct {
@@ -27,4 +29,16 @@ type DataNode struct {
 type DataLink struct {
 	E1 DataNode
 	E2 DataNode
+}
+
+func (n DataNode) String() string {
+	result := &strings.Builder{}
+	result.Grow(512) //nolint:gomnd
+
+	result.WriteString(n.Key)
+	result.WriteRune('=')
+
+	toStringRepresentationBuffered(n.Data, result)
+
+	return result.String()
 }

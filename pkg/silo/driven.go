@@ -38,3 +38,8 @@ type Backend interface {
 	ReadLinks() DataLinkReader
 	ReadNodes() DataNodeReader
 }
+
+type DumpWriter interface {
+	Write(node DataNode, uuid string) error
+	Close() error
+}

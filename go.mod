@@ -3,6 +3,7 @@ module github.com/cgi-fr/silo
 go 1.21
 
 require (
+	github.com/dominikbraun/graph v0.23.0
 	github.com/rs/zerolog v1.28.0
 	github.com/stretchr/testify v1.9.0
 )

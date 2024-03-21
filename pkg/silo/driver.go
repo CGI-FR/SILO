@@ -21,16 +21,52 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/dominikbraun/graph"
 )
 
 type Driver struct {
 	backend Backend
+	writer  DumpWriter
 }
 
-func NewDriver(backend Backend) *Driver {
+func NewDriver(backend Backend, writer DumpWriter) *Driver {
 	return &Driver{
 		backend: backend,
+		writer:  writer,
 	}
+}
+
+func (d *Driver) Dump() error {
+	nodes, _ := d.ReadAllNodes()
+	links, _ := d.ReadAllLinks()
+
+	grph := graph.New[string, DataNode](func(n DataNode) string { return n.String() }, graph.Directed())
+
+	for _, node := range nodes {
+		if err := grph.AddVertex(node); err != nil {
+			return fmt.Errorf("%w", err)
+		}
+	}
+
+	for _, link := range links {
+		if err := grph.AddEdge(link.E1.String(), link.E2.String()); err != nil {
+			return fmt.Errorf("%w", err)
+		}
+	}
+
+	result, err := graph.StronglyConnectedComponents[string, DataNode](grph)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	for i, component := range result {
+		for _, id := range component {
+			println(i, id)
+		}
+	}
+
+	return nil
 }
 
 func (d *Driver) Scan(input DataRowReader) error {
@@ -46,7 +82,7 @@ func (d *Driver) Scan(input DataRowReader) error {
 			break
 		}
 
-		nodes, links := scan(datarow)
+		nodes, links := Scan(datarow)
 
 		for _, node := range nodes {
 			if err := d.backend.StoreNode(node); err != nil {
@@ -62,26 +98,6 @@ func (d *Driver) Scan(input DataRowReader) error {
 	}
 
 	return nil
-}
-
-func scan(datarow DataRow) ([]DataNode, []DataLink) {
-	nodes := []DataNode{}
-	links := []DataLink{}
-
-	for key, value := range datarow {
-		if value != nil {
-			nodes = append(nodes, DataNode{Key: key, Data: value})
-		}
-	}
-
-	// find all pairs in nodes
-	for i := 0; i < len(nodes); i++ {
-		for j := i + 1; j < len(nodes); j++ {
-			links = append(links, DataLink{E1: nodes[i], E2: nodes[j]})
-		}
-	}
-
-	return nodes, links
 }
 
 func (d *Driver) ReadAllNodes() ([]DataNode, error) {
@@ -122,4 +138,24 @@ func (d *Driver) ReadAllLinks() ([]DataLink, error) {
 	}
 
 	return links, nil
+}
+
+func Scan(datarow DataRow) ([]DataNode, []DataLink) {
+	nodes := []DataNode{}
+	links := []DataLink{}
+
+	for key, value := range datarow {
+		if value != nil {
+			nodes = append(nodes, DataNode{Key: key, Data: value})
+		}
+	}
+
+	// find all pairs in nodes
+	for i := 0; i < len(nodes); i++ {
+		for j := i + 1; j < len(nodes); j++ {
+			links = append(links, DataLink{E1: nodes[i], E2: nodes[j]})
+		}
+	}
+
+	return nodes, links
 }

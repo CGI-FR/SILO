@@ -35,7 +35,7 @@ func TestNominal(t *testing.T) {
 	input := silo.NewDataRowReaderInMemory(rows)
 
 	backend := silo.NewBackendInMemory()
-	driver := silo.NewDriver(backend)
+	driver := silo.NewDriver(backend, nil)
 
 	err := driver.Scan(input)
 	require.NoError(t, err)
@@ -47,4 +47,54 @@ func TestNominal(t *testing.T) {
 	links, err := driver.ReadAllLinks()
 	require.NoError(t, err)
 	assert.Len(t, links, 12)
+
+	require.NoError(t, driver.Dump())
+}
+
+func TestPartialNull(t *testing.T) {
+	t.Parallel()
+
+	rows := []silo.DataRow{
+		{"ID1": 1, "ID2": nil, "ID3": nil, "ID4": "00001"},
+		{"ID1": nil, "ID2": "2", "ID3": 2.0, "ID4": nil},
+	}
+	input := silo.NewDataRowReaderInMemory(rows)
+
+	backend := silo.NewBackendInMemory()
+	driver := silo.NewDriver(backend, nil)
+
+	err := driver.Scan(input)
+	require.NoError(t, err)
+
+	nodes, err := driver.ReadAllNodes()
+	require.NoError(t, err)
+	assert.Len(t, nodes, 4)
+
+	links, err := driver.ReadAllLinks()
+	require.NoError(t, err)
+	assert.Len(t, links, 2)
+}
+
+func TestPartialMissing(t *testing.T) {
+	t.Parallel()
+
+	rows := []silo.DataRow{
+		{"ID1": 1, "ID4": "00001"},
+		{"ID2": "2", "ID3": 2.0},
+	}
+	input := silo.NewDataRowReaderInMemory(rows)
+
+	backend := silo.NewBackendInMemory()
+	driver := silo.NewDriver(backend, nil)
+
+	err := driver.Scan(input)
+	require.NoError(t, err)
+
+	nodes, err := driver.ReadAllNodes()
+	require.NoError(t, err)
+	assert.Len(t, nodes, 4)
+
+	links, err := driver.ReadAllLinks()
+	require.NoError(t, err)
+	assert.Len(t, links, 2)
 }
