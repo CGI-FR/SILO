@@ -18,9 +18,8 @@
 package main
 
 import (
-	"fmt"
 	"os"
-	
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
