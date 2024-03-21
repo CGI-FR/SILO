@@ -86,8 +86,8 @@ func scan(datarow DataRow) ([]DataNode, []DataLink) {
 
 func (d *Driver) ReadAllNodes() ([]DataNode, error) {
 	nodes := []DataNode{}
-
 	reader := d.backend.ReadNodes()
+
 	for {
 		node, err := reader.ReadDataNode()
 		if err != nil && !errors.Is(err, io.EOF) {
@@ -106,8 +106,8 @@ func (d *Driver) ReadAllNodes() ([]DataNode, error) {
 
 func (d *Driver) ReadAllLinks() ([]DataLink, error) {
 	links := []DataLink{}
-
 	reader := d.backend.ReadLinks()
+
 	for {
 		link, err := reader.ReadDataLink()
 		if err != nil && !errors.Is(err, io.EOF) {
