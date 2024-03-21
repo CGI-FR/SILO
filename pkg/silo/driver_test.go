@@ -73,6 +73,8 @@ func TestPartialNull(t *testing.T) {
 	links, err := driver.ReadAllLinks()
 	require.NoError(t, err)
 	assert.Len(t, links, 2)
+
+	require.NoError(t, driver.Dump())
 }
 
 func TestPartialMissing(t *testing.T) {
@@ -97,4 +99,6 @@ func TestPartialMissing(t *testing.T) {
 	links, err := driver.ReadAllLinks()
 	require.NoError(t, err)
 	assert.Len(t, links, 2)
+
+	require.NoError(t, driver.Dump())
 }

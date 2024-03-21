@@ -40,10 +40,13 @@ func NewDriver(backend Backend, writer DumpWriter) *Driver {
 func (d *Driver) Dump() error {
 	nodes, _ := d.ReadAllNodes()
 	links, _ := d.ReadAllLinks()
+	nodemap := map[string]DataNode{}
 
-	grph := graph.New[string, DataNode](func(n DataNode) string { return n.String() }, graph.Directed())
+	grph := graph.New[string, DataNode](func(n DataNode) string { return n.String() })
 
 	for _, node := range nodes {
+		nodemap[node.String()] = node
+
 		if err := grph.AddVertex(node); err != nil {
 			return fmt.Errorf("%w", err)
 		}
@@ -55,14 +58,24 @@ func (d *Driver) Dump() error {
 		}
 	}
 
-	result, err := graph.StronglyConnectedComponents[string, DataNode](grph)
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
+	for count := 0; ; count++ {
+		if len(nodemap) == 0 {
+			break
+		}
 
-	for i, component := range result {
-		for _, id := range component {
-			println(i, id)
+		for key := range nodemap {
+			err := graph.BFS[string, DataNode](grph, key, func(hash string) bool {
+				println(count, hash)
+
+				delete(nodemap, hash)
+
+				return false
+			})
+			if err != nil {
+				return fmt.Errorf("%w", err)
+			}
+
+			break
 		}
 	}
 
