@@ -38,6 +38,7 @@ func NewDriver(backend Backend, writer DumpWriter) *Driver {
 	}
 }
 
+//nolint:cyclop
 func (d *Driver) Dump() error {
 	nodes, _ := d.ReadAllNodes()
 	links, _ := d.ReadAllLinks()
@@ -54,7 +55,7 @@ func (d *Driver) Dump() error {
 	}
 
 	for _, link := range links {
-		if err := grph.AddEdge(link.E1.String(), link.E2.String()); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
+		if err := grph.AddEdge(link.E1.String(), link.E2.String()); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) { //nolint:lll
 			return fmt.Errorf("%w", err)
 		}
 	}
