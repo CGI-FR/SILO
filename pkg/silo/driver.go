@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 
 	"github.com/dominikbraun/graph"
 )
@@ -47,13 +48,13 @@ func (d *Driver) Dump() error {
 	for _, node := range nodes {
 		nodemap[node.String()] = node
 
-		if err := grph.AddVertex(node); err != nil {
+		if err := grph.AddVertex(node); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
 			return fmt.Errorf("%w", err)
 		}
 	}
 
 	for _, link := range links {
-		if err := grph.AddEdge(link.E1.String(), link.E2.String()); err != nil {
+		if err := grph.AddEdge(link.E1.String(), link.E2.String()); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) {
 			return fmt.Errorf("%w", err)
 		}
 	}
@@ -65,7 +66,7 @@ func (d *Driver) Dump() error {
 
 		for key := range nodemap {
 			err := graph.BFS[string, DataNode](grph, key, func(hash string) bool {
-				println(count, hash)
+				_ = d.writer.Write(nodemap[hash], strconv.Itoa(count))
 
 				delete(nodemap, hash)
 

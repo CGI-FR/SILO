@@ -29,13 +29,14 @@ func TestNominal(t *testing.T) {
 	t.Parallel()
 
 	rows := []silo.DataRow{
-		{"ID1": 1, "ID2": "1", "ID3": 1.0, "ID4": "00001"},
-		{"ID1": 2, "ID2": "2", "ID3": 2.0, "ID4": "00002"},
+		{"ID1": 1, "ID2": "1", "ID3": 1.10, "ID4": "00001"},
+		{"ID1": 2, "ID2": "2", "ID3": 2.20, "ID4": "00002"},
 	}
 	input := silo.NewDataRowReaderInMemory(rows)
 
 	backend := silo.NewBackendInMemory()
-	driver := silo.NewDriver(backend, nil)
+	writer := silo.NewDumpToStdout()
+	driver := silo.NewDriver(backend, writer)
 
 	err := driver.Scan(input)
 	require.NoError(t, err)
@@ -61,7 +62,8 @@ func TestPartialNull(t *testing.T) {
 	input := silo.NewDataRowReaderInMemory(rows)
 
 	backend := silo.NewBackendInMemory()
-	driver := silo.NewDriver(backend, nil)
+	writer := silo.NewDumpToStdout()
+	driver := silo.NewDriver(backend, writer)
 
 	err := driver.Scan(input)
 	require.NoError(t, err)
@@ -87,7 +89,8 @@ func TestPartialMissing(t *testing.T) {
 	input := silo.NewDataRowReaderInMemory(rows)
 
 	backend := silo.NewBackendInMemory()
-	driver := silo.NewDriver(backend, nil)
+	writer := silo.NewDumpToStdout()
+	driver := silo.NewDriver(backend, writer)
 
 	err := driver.Scan(input)
 	require.NoError(t, err)
