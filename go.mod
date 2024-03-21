@@ -1,9 +1,8 @@
-module github.com/adrienaury/go-template
+module github.com/cgi-fr/silo
 
 go 1.21
 
 require (
-	github.com/gorilla/mux v1.8.0
 	github.com/rs/zerolog v1.28.0
 )
 

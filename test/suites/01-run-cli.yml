@@ -6,5 +6,4 @@ testcases:
     steps:
       - script: cli
         assertions:
-          - result.systemout ShouldContainSubstring Hello World!
           - result.code ShouldEqual 0
