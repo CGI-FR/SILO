@@ -150,11 +150,15 @@ func (b Backend) Store(key string, value string) error {
 	return nil
 }
 
-func (b Backend) Snapshot() silo.Snapshot {
+func (b Backend) Snapshot() silo.Snapshot { //nolint:ireturn
 	return Snapshot{b.db.NewIndexedBatch()}
 }
 
 func (b Backend) Close() error {
+	if err := b.db.Flush(); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
 	if err := b.db.Close(); err != nil {
 		return fmt.Errorf("%w", err)
 	}

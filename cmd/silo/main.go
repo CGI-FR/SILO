@@ -97,6 +97,8 @@ func run(_ *cobra.Command) error {
 		return fmt.Errorf("%w", err)
 	}
 
+	defer backend.Close()
+
 	writer := silo.NewDumpToStdout()
 
 	driver := silo.NewDriver(backend, writer)

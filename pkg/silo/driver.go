@@ -39,6 +39,8 @@ func NewDriver(backend Backend, writer DumpWriter) *Driver {
 func (d *Driver) Dump() error {
 	snapshot := d.backend.Snapshot()
 
+	defer snapshot.Close()
+
 	for count := 0; ; count++ {
 		entryNode, present, err := snapshot.Next()
 		if err != nil {
