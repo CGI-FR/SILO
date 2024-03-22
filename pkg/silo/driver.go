@@ -57,7 +57,7 @@ func (d *Driver) Dump() error {
 	return nil
 }
 
-func (d *Driver) dump(snapshot Snapshot, node string, done map[string]any, id int) error {
+func (d *Driver) dump(snapshot Snapshot, node string, done map[string]any, uuid int) error {
 	connectedNodes, err := snapshot.PullAll(node)
 	if err != nil {
 		return fmt.Errorf("%w", err)
@@ -65,10 +65,10 @@ func (d *Driver) dump(snapshot Snapshot, node string, done map[string]any, id in
 
 	for _, connectedNode := range connectedNodes {
 		if _, ok := done[connectedNode]; !ok {
-			_ = d.writer.Write(connectedNode, strconv.Itoa(id))
+			_ = d.writer.Write(connectedNode, strconv.Itoa(uuid))
 			done[connectedNode] = nil
 
-			if err := d.dump(snapshot, connectedNode, done, id); err != nil {
+			if err := d.dump(snapshot, connectedNode, done, uuid); err != nil {
 				return fmt.Errorf("%w", err)
 			}
 		}
