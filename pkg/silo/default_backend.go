@@ -17,34 +17,38 @@
 
 package silo
 
+import "github.com/cgi-fr/silo/pkg/multimap"
+
 type BackendInMemory struct {
-	links []DataLink
-	nodes []DataNode
+	links multimap.Multimap[DataNode, DataNode]
 }
 
 func NewBackendInMemory() *BackendInMemory {
 	return &BackendInMemory{
-		links: []DataLink{},
-		nodes: []DataNode{},
+		links: multimap.Multimap[DataNode, DataNode]{},
 	}
 }
 
-func (b *BackendInMemory) StoreLink(link DataLink) error {
-	b.links = append(b.links, link)
+func (b *BackendInMemory) Store(key DataNode, value DataNode) error {
+	b.links.Add(key, value)
 
 	return nil
 }
 
-func (b *BackendInMemory) StoreNode(node DataNode) error {
-	b.nodes = append(b.nodes, node)
+func (b *BackendInMemory) Snapshot() Snapshot { //nolint:ireturn
+	return &BackendInMemory{
+		links: b.links.Copy(),
+	}
+}
 
+func (b *BackendInMemory) Close() error {
 	return nil
 }
 
-func (b *BackendInMemory) ReadLinks() DataLinkReader { //nolint:ireturn
-	return NewDataLinkReaderInMemory(b.links)
+func (b *BackendInMemory) Next() (DataNode, bool) {
+	return b.links.RandomKey()
 }
 
-func (b *BackendInMemory) ReadNodes() DataNodeReader { //nolint:ireturn
-	return NewDataNodeReaderInMemory(b.nodes)
+func (b *BackendInMemory) PullAll(node DataNode) ([]DataNode, error) {
+	return b.links.Delete(node), nil
 }

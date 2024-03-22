@@ -33,10 +33,15 @@ type DataNodeReader interface {
 }
 
 type Backend interface {
-	StoreLink(link DataLink) error
-	StoreNode(node DataNode) error
-	ReadLinks() DataLinkReader
-	ReadNodes() DataNodeReader
+	Store(key DataNode, value DataNode) error
+	Snapshot() Snapshot
+	Close() error
+}
+
+type Snapshot interface {
+	Next() (DataNode, bool)
+	PullAll(node DataNode) ([]DataNode, error)
+	Close() error
 }
 
 type DumpWriter interface {

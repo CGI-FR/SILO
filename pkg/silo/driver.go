@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-
-	"github.com/dominikbraun/graph"
 )
 
 type Driver struct {
@@ -38,46 +36,25 @@ func NewDriver(backend Backend, writer DumpWriter) *Driver {
 	}
 }
 
-//nolint:cyclop
 func (d *Driver) Dump() error {
-	nodes, _ := d.ReadAllNodes()
-	links, _ := d.ReadAllLinks()
-	nodemap := map[string]DataNode{}
-
-	grph := graph.New[string, DataNode](func(n DataNode) string { return n.String() })
-
-	for _, node := range nodes {
-		nodemap[node.String()] = node
-
-		if err := grph.AddVertex(node); err != nil && !errors.Is(err, graph.ErrVertexAlreadyExists) {
-			return fmt.Errorf("%w", err)
-		}
-	}
-
-	for _, link := range links {
-		if err := grph.AddEdge(link.E1.String(), link.E2.String()); err != nil && !errors.Is(err, graph.ErrEdgeAlreadyExists) { //nolint:lll
-			return fmt.Errorf("%w", err)
-		}
-	}
+	snapshot := d.backend.Snapshot()
 
 	for count := 0; ; count++ {
-		if len(nodemap) == 0 {
+
+		entryNode, present := snapshot.Next()
+		if !present {
 			break
 		}
 
-		for key := range nodemap {
-			err := graph.BFS[string, DataNode](grph, key, func(hash string) bool {
-				_ = d.writer.Write(nodemap[hash], strconv.Itoa(count))
+		_ = d.writer.Write(entryNode, strconv.Itoa(count))
 
-				delete(nodemap, hash)
+		connectedNodes, err := snapshot.PullAll(entryNode)
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
 
-				return false
-			})
-			if err != nil {
-				return fmt.Errorf("%w", err)
-			}
-
-			break
+		for _, connectedNode := range connectedNodes {
+			_ = d.writer.Write(connectedNode, strconv.Itoa(count))
 		}
 	}
 
@@ -97,16 +74,14 @@ func (d *Driver) Scan(input DataRowReader) error {
 			break
 		}
 
-		nodes, links := Scan(datarow)
-
-		for _, node := range nodes {
-			if err := d.backend.StoreNode(node); err != nil {
-				return fmt.Errorf("%w: %w", ErrPersistingData, err)
-			}
-		}
+		links := Scan(datarow)
 
 		for _, link := range links {
-			if err := d.backend.StoreLink(link); err != nil {
+			if err := d.backend.Store(link.E1, link.E2); err != nil {
+				return fmt.Errorf("%w: %w", ErrPersistingData, err)
+			}
+
+			if err := d.backend.Store(link.E2, link.E1); err != nil {
 				return fmt.Errorf("%w: %w", ErrPersistingData, err)
 			}
 		}
@@ -115,47 +90,7 @@ func (d *Driver) Scan(input DataRowReader) error {
 	return nil
 }
 
-func (d *Driver) ReadAllNodes() ([]DataNode, error) {
-	nodes := []DataNode{}
-	reader := d.backend.ReadNodes()
-
-	for {
-		node, err := reader.ReadDataNode()
-		if err != nil && !errors.Is(err, io.EOF) {
-			return nodes, fmt.Errorf("%w: %w", ErrReadingPersistedData, err)
-		}
-
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		nodes = append(nodes, node)
-	}
-
-	return nodes, nil
-}
-
-func (d *Driver) ReadAllLinks() ([]DataLink, error) {
-	links := []DataLink{}
-	reader := d.backend.ReadLinks()
-
-	for {
-		link, err := reader.ReadDataLink()
-		if err != nil && !errors.Is(err, io.EOF) {
-			return links, fmt.Errorf("%w: %w", ErrReadingPersistedData, err)
-		}
-
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		links = append(links, link)
-	}
-
-	return links, nil
-}
-
-func Scan(datarow DataRow) ([]DataNode, []DataLink) {
+func Scan(datarow DataRow) []DataLink {
 	nodes := []DataNode{}
 	links := []DataLink{}
 
@@ -165,6 +100,10 @@ func Scan(datarow DataRow) ([]DataNode, []DataLink) {
 		}
 	}
 
+	if len(nodes) == 1 {
+		links = append(links, DataLink{E1: nodes[0], E2: nodes[0]})
+	}
+
 	// find all pairs in nodes
 	for i := 0; i < len(nodes); i++ {
 		for j := i + 1; j < len(nodes); j++ {
@@ -172,5 +111,5 @@ func Scan(datarow DataRow) ([]DataNode, []DataLink) {
 		}
 	}
 
-	return nodes, links
+	return links
 }

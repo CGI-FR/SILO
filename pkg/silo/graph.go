@@ -34,6 +34,10 @@ func toStringRepresentationBuffered(value any, stringbuffer *strings.Builder) {
 		stringbuffer.WriteString("bool(")
 		stringbuffer.WriteString(strconv.FormatBool(tvalue))
 		stringbuffer.WriteByte(')')
+	case float32:
+		stringbuffer.WriteString("number(")
+		stringbuffer.WriteString(strconv.FormatFloat(float64(tvalue), 'g', -1, 32))
+		stringbuffer.WriteByte(')')
 	case float64:
 		stringbuffer.WriteString("number(")
 		stringbuffer.WriteString(strconv.FormatFloat(tvalue, 'g', -1, 64))

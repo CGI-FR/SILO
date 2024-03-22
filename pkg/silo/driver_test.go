@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/cgi-fr/silo/pkg/silo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,14 +39,6 @@ func TestNominal(t *testing.T) {
 
 	err := driver.Scan(input)
 	require.NoError(t, err)
-
-	nodes, err := driver.ReadAllNodes()
-	require.NoError(t, err)
-	assert.Len(t, nodes, 8)
-
-	links, err := driver.ReadAllLinks()
-	require.NoError(t, err)
-	assert.Len(t, links, 12)
 
 	require.NoError(t, driver.Dump())
 }
@@ -68,14 +59,6 @@ func TestPartialNull(t *testing.T) {
 	err := driver.Scan(input)
 	require.NoError(t, err)
 
-	nodes, err := driver.ReadAllNodes()
-	require.NoError(t, err)
-	assert.Len(t, nodes, 4)
-
-	links, err := driver.ReadAllLinks()
-	require.NoError(t, err)
-	assert.Len(t, links, 2)
-
 	require.NoError(t, driver.Dump())
 }
 
@@ -94,14 +77,6 @@ func TestPartialMissing(t *testing.T) {
 
 	err := driver.Scan(input)
 	require.NoError(t, err)
-
-	nodes, err := driver.ReadAllNodes()
-	require.NoError(t, err)
-	assert.Len(t, nodes, 4)
-
-	links, err := driver.ReadAllLinks()
-	require.NoError(t, err)
-	assert.Len(t, links, 2)
 
 	require.NoError(t, driver.Dump())
 }
