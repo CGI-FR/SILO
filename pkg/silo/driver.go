@@ -40,7 +40,6 @@ func (d *Driver) Dump() error {
 	snapshot := d.backend.Snapshot()
 
 	for count := 0; ; count++ {
-
 		entryNode, present := snapshot.Next()
 		if !present {
 			break
@@ -48,13 +47,30 @@ func (d *Driver) Dump() error {
 
 		_ = d.writer.Write(entryNode, strconv.Itoa(count))
 
-		connectedNodes, err := snapshot.PullAll(entryNode)
-		if err != nil {
+		done := map[string]any{entryNode: nil}
+
+		if err := d.dump(snapshot, entryNode, done, count); err != nil {
 			return fmt.Errorf("%w", err)
 		}
+	}
 
-		for _, connectedNode := range connectedNodes {
-			_ = d.writer.Write(connectedNode, strconv.Itoa(count))
+	return nil
+}
+
+func (d *Driver) dump(snapshot Snapshot, node string, done map[string]any, id int) error {
+	connectedNodes, err := snapshot.PullAll(node)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	for _, connectedNode := range connectedNodes {
+		if _, ok := done[connectedNode]; !ok {
+			_ = d.writer.Write(connectedNode, strconv.Itoa(id))
+			done[connectedNode] = nil
+
+			if err := d.dump(snapshot, connectedNode, done, id); err != nil {
+				return fmt.Errorf("%w", err)
+			}
 		}
 	}
 
@@ -77,11 +93,11 @@ func (d *Driver) Scan(input DataRowReader) error {
 		links := Scan(datarow)
 
 		for _, link := range links {
-			if err := d.backend.Store(link.E1, link.E2); err != nil {
+			if err := d.backend.Store(link.E1.String(), link.E2.String()); err != nil {
 				return fmt.Errorf("%w: %w", ErrPersistingData, err)
 			}
 
-			if err := d.backend.Store(link.E2, link.E1); err != nil {
+			if err := d.backend.Store(link.E2.String(), link.E1.String()); err != nil {
 				return fmt.Errorf("%w: %w", ErrPersistingData, err)
 			}
 		}

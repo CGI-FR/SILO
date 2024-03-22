@@ -33,18 +33,18 @@ type DataNodeReader interface {
 }
 
 type Backend interface {
-	Store(key DataNode, value DataNode) error
+	Store(key string, value string) error
 	Snapshot() Snapshot
 	Close() error
 }
 
 type Snapshot interface {
-	Next() (DataNode, bool)
-	PullAll(node DataNode) ([]DataNode, error)
+	Next() (string, bool)
+	PullAll(node string) ([]string, error)
 	Close() error
 }
 
 type DumpWriter interface {
-	Write(node DataNode, uuid string) error
+	Write(node string, uuid string) error
 	Close() error
 }
