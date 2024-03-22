@@ -80,3 +80,32 @@ func TestPartialMissing(t *testing.T) {
 
 	require.NoError(t, driver.Dump())
 }
+
+func TestReconnect(t *testing.T) {
+	t.Parallel()
+
+	rows := []silo.DataRow{
+		{"ID1": 1, "ID4": "00001"},
+		{"ID2": "1", "ID3": 1.10},
+	}
+	input := silo.NewDataRowReaderInMemory(rows)
+
+	backend := silo.NewBackendInMemory()
+	writer := silo.NewDumpToStdout()
+	driver := silo.NewDriver(backend, writer)
+
+	err := driver.Scan(input)
+	require.NoError(t, err)
+
+	require.NoError(t, driver.Dump())
+
+	rows = []silo.DataRow{
+		{"ID1": 1, "ID2": "1"},
+	}
+	input = silo.NewDataRowReaderInMemory(rows)
+
+	err = driver.Scan(input)
+	require.NoError(t, err)
+
+	require.NoError(t, driver.Dump())
+}
