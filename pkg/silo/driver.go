@@ -40,7 +40,11 @@ func (d *Driver) Dump() error {
 	snapshot := d.backend.Snapshot()
 
 	for count := 0; ; count++ {
-		entryNode, present := snapshot.Next()
+		entryNode, present, err := snapshot.Next()
+		if err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
 		if !present {
 			break
 		}

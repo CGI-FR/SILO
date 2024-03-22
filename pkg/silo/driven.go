@@ -29,7 +29,7 @@ type Backend interface {
 }
 
 type Snapshot interface {
-	Next() (string, bool)
+	Next() (string, bool, error)
 	PullAll(node string) ([]string, error)
 	Close() error
 }

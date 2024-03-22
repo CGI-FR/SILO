@@ -18,10 +18,17 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	"runtime"
+	"strings"
 
+	"github.com/cgi-fr/silo/internal/infra"
+	"github.com/cgi-fr/silo/pkg/silo"
+	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/cobra"
 )
 
 // Provisioned by ldflags.
@@ -31,11 +38,123 @@ var (
 	commit    string //nolint: gochecknoglobals
 	buildDate string //nolint: gochecknoglobals
 	builtBy   string //nolint: gochecknoglobals
+
+	verbosity string
+	jsonlog   bool
+	debug     bool
+	colormode string
+	profiling bool
 )
 
 func main() {
-	//nolint: exhaustruct
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	cobra.OnInitialize(initLog)
 
-	log.Info().Msgf("%v %v (commit=%v date=%v by=%v)", name, version, commit, buildDate, builtBy)
+	rootCmd := &cobra.Command{ //nolint:exhaustruct
+		Use:     name,
+		Short:   "Sparse Input Linked Output",
+		Long:    `SILO is a purpose-built tool designed for ...`,
+		Example: `TODO`,
+		Version: fmt.Sprintf(`%v (commit=%v date=%v by=%v)
+Copyright (C) 2024 CGI France
+License GPLv3: GNU GPL version 3 <https://gnu.org/licenses/gpl.html>.
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.`, version, commit, buildDate, builtBy),
+		PersistentPreRun: func(_ *cobra.Command, args []string) {
+			log.Info().
+				Str("verbosity", verbosity).
+				Bool("log-json", jsonlog).
+				Bool("debug", debug).
+				Str("color", colormode).
+				Msg("start SILO")
+		},
+		Args: cobra.ExactArgs(0),
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := run(cmd); err != nil {
+				log.Fatal().Err(err).Msg("end SILO")
+			}
+		},
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			log.Info().Int("return", 0).Msg("end SILO")
+		},
+	}
+
+	rootCmd.PersistentFlags().StringVarP(&verbosity, "verbosity", "v", "warn",
+		"set level of log verbosity : none (0), error (1), warn (2), info (3), debug (4), trace (5)")
+	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "add debug information to logs (very slow)")
+	rootCmd.PersistentFlags().BoolVar(&jsonlog, "log-json", false, "output logs in JSON format")
+	rootCmd.PersistentFlags().StringVar(&colormode, "color", "auto", "use colors in log outputs : yes, no or auto")
+	rootCmd.PersistentFlags().BoolVar(&profiling, "profiling", false, "enable cpu profiling and generate a cpu.pprof file")
+
+	if err := rootCmd.Execute(); err != nil {
+		log.Err(err).Msg("error when executing command")
+		os.Exit(1)
+	}
+}
+
+func run(_ *cobra.Command) error {
+	backend, err := infra.NewBackend("silo-pebble")
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	writer := silo.NewDumpToStdout()
+
+	driver := silo.NewDriver(backend, writer)
+
+	reader, err := infra.NewDataRowReaderJSONLine()
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	if err := driver.Scan(reader); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	if err := driver.Dump(); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
+func initLog() {
+	color := false
+
+	switch strings.ToLower(colormode) {
+	case "auto":
+		if isatty.IsTerminal(os.Stdout.Fd()) && runtime.GOOS != "windows" {
+			color = true
+		}
+	case "yes", "true", "1", "on", "enable":
+		color = true
+	}
+
+	if jsonlog {
+		log.Logger = zerolog.New(os.Stderr)
+	} else {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, NoColor: !color}) //nolint:exhaustruct
+	}
+
+	if debug {
+		log.Logger = log.Logger.With().Caller().Logger()
+	}
+
+	setVerbosity()
+}
+
+func setVerbosity() {
+	switch verbosity {
+	case "trace", "5":
+		zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	case "debug", "4":
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	case "info", "3":
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	case "warn", "2":
+		zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	case "error", "1":
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	default:
+		zerolog.SetGlobalLevel(zerolog.Disabled)
+	}
 }

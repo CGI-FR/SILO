@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/cgi-fr/silo/pkg/silo"
 	"github.com/cockroachdb/pebble"
 )
 
@@ -149,7 +150,7 @@ func (b Backend) Store(key string, value string) error {
 	return nil
 }
 
-func (b Backend) Snapshot() Snapshot {
+func (b Backend) Snapshot() silo.Snapshot {
 	return Snapshot{b.db.NewIndexedBatch()}
 }
 

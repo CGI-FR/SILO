@@ -45,8 +45,10 @@ func (b *BackendInMemory) Close() error {
 	return nil
 }
 
-func (b *BackendInMemory) Next() (string, bool) {
-	return b.links.RandomKey()
+func (b *BackendInMemory) Next() (string, bool, error) {
+	key, present := b.links.RandomKey()
+
+	return key, present, nil
 }
 
 func (b *BackendInMemory) PullAll(node string) ([]string, error) {
