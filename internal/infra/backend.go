@@ -162,7 +162,7 @@ func (b Backend) Close() error {
 }
 
 func NewBackend(path string) (Backend, error) {
-	database, err := pebble.Open(path, &pebble.Options{})
+	database, err := pebble.Open(path, &pebble.Options{}) //nolint:exhaustruct
 	if err != nil {
 		return Backend{}, fmt.Errorf("unable to open database %v : %w", path, err)
 	}
