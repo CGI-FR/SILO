@@ -39,11 +39,11 @@ var (
 	buildDate string //nolint: gochecknoglobals
 	builtBy   string //nolint: gochecknoglobals
 
-	verbosity string
-	jsonlog   bool
-	debug     bool
-	colormode string
-	profiling bool
+	verbosity string //nolint: gochecknoglobals
+	jsonlog   bool   //nolint: gochecknoglobals
+	debug     bool   //nolint: gochecknoglobals
+	colormode string //nolint: gochecknoglobals
+	profiling bool   //nolint: gochecknoglobals
 )
 
 func main() {
@@ -59,7 +59,7 @@ Copyright (C) 2024 CGI France
 License GPLv3: GNU GPL version 3 <https://gnu.org/licenses/gpl.html>.
 This is free software: you are free to change and redistribute it.
 There is NO WARRANTY, to the extent permitted by law.`, version, commit, buildDate, builtBy),
-		PersistentPreRun: func(_ *cobra.Command, args []string) {
+		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			log.Info().
 				Str("verbosity", verbosity).
 				Bool("log-json", jsonlog).
@@ -68,12 +68,12 @@ There is NO WARRANTY, to the extent permitted by law.`, version, commit, buildDa
 				Msg("start SILO")
 		},
 		Args: cobra.ExactArgs(0),
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(cmd *cobra.Command, _ []string) {
 			if err := run(cmd); err != nil {
 				log.Fatal().Err(err).Msg("end SILO")
 			}
 		},
-		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+		PersistentPostRun: func(_ *cobra.Command, _ []string) {
 			log.Info().Int("return", 0).Msg("end SILO")
 		},
 	}
