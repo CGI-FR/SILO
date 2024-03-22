@@ -22,16 +22,6 @@ type DataRowReader interface {
 	Close() error
 }
 
-type DataLinkReader interface {
-	ReadDataLink() (DataLink, error)
-	Close() error
-}
-
-type DataNodeReader interface {
-	ReadDataNode() (DataNode, error)
-	Close() error
-}
-
 type Backend interface {
 	Store(key string, value string) error
 	Snapshot() Snapshot
