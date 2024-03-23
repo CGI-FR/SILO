@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strconv"
 )
 
 type Driver struct {
@@ -42,39 +41,44 @@ func (d *Driver) Dump() error {
 	defer snapshot.Close()
 
 	for count := 0; ; count++ {
-		entryNode, present, err := snapshot.Next()
+		entryNode, hasNext, err := snapshot.Next()
 		if err != nil {
 			return fmt.Errorf("%w", err)
 		}
 
-		if !present {
+		if !hasNext {
 			break
 		}
 
-		_ = d.writer.Write(entryNode, strconv.Itoa(count))
+		entity := NewEntity(entryNode)
 
-		done := map[DataNode]any{entryNode: nil}
-
-		if err := d.dump(snapshot, entryNode, done, count); err != nil {
+		if err := d.writer.Write(entryNode, entity.UUID()); err != nil {
 			return fmt.Errorf("%w", err)
 		}
+
+		if err := d.dump(snapshot, entryNode, entity); err != nil {
+			return fmt.Errorf("%w", err)
+		}
+
+		entity.Finalize()
 	}
 
 	return nil
 }
 
-func (d *Driver) dump(snapshot Snapshot, node DataNode, done map[DataNode]any, uuid int) error {
+func (d *Driver) dump(snapshot Snapshot, node DataNode, entity Entity) error {
 	connectedNodes, err := snapshot.PullAll(node)
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
 	for _, connectedNode := range connectedNodes {
-		if _, ok := done[connectedNode]; !ok {
-			_ = d.writer.Write(connectedNode, strconv.Itoa(uuid))
-			done[connectedNode] = nil
+		if entity.Append(connectedNode) {
+			if err := d.writer.Write(connectedNode, entity.UUID()); err != nil {
+				return fmt.Errorf("%w", err)
+			}
 
-			if err := d.dump(snapshot, connectedNode, done, uuid); err != nil {
+			if err := d.dump(snapshot, connectedNode, entity); err != nil {
 				return fmt.Errorf("%w", err)
 			}
 		}
