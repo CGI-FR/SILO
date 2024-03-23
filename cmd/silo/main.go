@@ -99,7 +99,7 @@ func run(_ *cobra.Command) error {
 
 	defer backend.Close()
 
-	writer := silo.NewDumpToStdout()
+	writer := infra.NewDumpJSONLine()
 
 	driver := silo.NewDriver(backend, writer)
 
