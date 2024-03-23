@@ -32,9 +32,9 @@ func NewDumpJSONLine() *DumpJSONLine {
 
 func (d *DumpJSONLine) Write(node silo.DataNode, uuid string) error {
 	line := struct {
-		UUID string
-		ID   string
-		Key  any
+		UUID string `json:"uuid"`
+		ID   string `json:"id"`
+		Key  any    `json:"key"`
 	}{
 		UUID: uuid,
 		ID:   node.Key,
