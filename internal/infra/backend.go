@@ -25,6 +25,7 @@ import (
 
 	"github.com/cgi-fr/silo/pkg/silo"
 	"github.com/cockroachdb/pebble"
+	"github.com/rs/zerolog/log"
 )
 
 func decode(value []byte) ([]silo.DataNode, error) {
@@ -187,10 +188,20 @@ func (b Backend) Close() error {
 }
 
 func NewBackend(path string) (Backend, error) {
-	database, err := pebble.Open(path, &pebble.Options{}) //nolint:exhaustruct
+	database, err := pebble.Open(path, &pebble.Options{Logger: BackendLogger{}}) //nolint:exhaustruct
 	if err != nil {
 		return Backend{}, fmt.Errorf("unable to open database %v : %w", path, err)
 	}
 
 	return Backend{db: database}, nil
+}
+
+type BackendLogger struct{}
+
+func (l BackendLogger) Infof(format string, args ...interface{}) {
+	log.Info().Msgf(format, args...)
+}
+
+func (l BackendLogger) Fatalf(format string, args ...interface{}) {
+	log.Error().Msgf(format, args...)
 }
