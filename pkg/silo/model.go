@@ -17,7 +17,12 @@
 
 package silo
 
-import "strings"
+import (
+	"bytes"
+	"encoding/gob"
+	"fmt"
+	"strings"
+)
 
 type DataRow map[string]any
 
@@ -29,6 +34,30 @@ type DataNode struct {
 type DataLink struct {
 	E1 DataNode
 	E2 DataNode
+}
+
+func DecodeDataNode(data []byte) (DataNode, error) {
+	var result DataNode
+
+	buf := bytes.NewBuffer(data)
+	decoder := gob.NewDecoder(buf)
+
+	if err := decoder.Decode(&result); err != nil {
+		return DataNode{}, fmt.Errorf("%w", err)
+	}
+
+	return result, nil
+}
+
+func (n DataNode) Binary() ([]byte, error) {
+	buf := new(bytes.Buffer)
+	encoder := gob.NewEncoder(buf)
+
+	if err := encoder.Encode(n); err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+
+	return buf.Bytes(), nil
 }
 
 func (n DataNode) String() string {

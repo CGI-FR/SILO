@@ -18,7 +18,8 @@
 package infra
 
 import (
-	"encoding/json"
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 
@@ -26,15 +27,17 @@ import (
 	"github.com/cockroachdb/pebble"
 )
 
-func decode(value []byte) ([]string, error) {
-	var set map[string]any
+func decode(value []byte) ([]silo.DataNode, error) {
+	var set map[silo.DataNode]any
 
-	err := json.Unmarshal(value, &set)
+	decoder := gob.NewDecoder(bytes.NewBuffer(value))
+
+	err := decoder.Decode(&set)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
 
-	items := make([]string, 0, len(set))
+	items := make([]silo.DataNode, 0, len(set))
 
 	for item := range set {
 		items = append(items, item)
@@ -43,62 +46,69 @@ func decode(value []byte) ([]string, error) {
 	return items, nil
 }
 
-func encode(items []string) ([]byte, error) {
-	set := make(map[string]any, len(items))
+func encode(items []silo.DataNode) ([]byte, error) {
+	result := new(bytes.Buffer)
+
+	set := make(map[silo.DataNode]any, len(items))
 
 	for _, item := range items {
 		set[item] = nil
 	}
 
-	rawNodes, err := json.Marshal(set)
-	if err != nil {
+	encoder := gob.NewEncoder(result)
+	if err := encoder.Encode(set); err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
 
-	return rawNodes, nil
+	return result.Bytes(), nil
 }
 
 type Snapshot struct {
 	db *pebble.Batch
 }
 
-func (s Snapshot) Next() (string, bool, error) {
+func (s Snapshot) Next() (silo.DataNode, bool, error) {
 	iter, err := s.db.NewIter(&pebble.IterOptions{}) //nolint:exhaustruct
 	if errors.Is(err, pebble.ErrNotFound) {
-		return "", false, nil
+		return silo.DataNode{}, false, nil
 	} else if err != nil {
-		return "", false, fmt.Errorf("%w", err)
+		return silo.DataNode{}, false, fmt.Errorf("%w", err)
 	}
 
 	defer iter.Close()
 
 	if !iter.First() {
-		return "", false, nil
+		return silo.DataNode{}, false, nil
 	}
 
-	return string(iter.Key()), true, nil
+	key, err := silo.DecodeDataNode(iter.Key())
+	if err != nil {
+		return silo.DataNode{}, false, fmt.Errorf("%w", err)
+	}
+
+	return key, true, nil
 }
 
-func (s Snapshot) PullAll(node string) ([]string, error) {
-	var (
-		set []string
-		err error
-	)
+func (s Snapshot) PullAll(node silo.DataNode) ([]silo.DataNode, error) {
+	key, err := node.Binary()
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
 
-	item, closer, err := s.db.Get([]byte(node))
+	item, closer, err := s.db.Get(key)
 	if errors.Is(err, pebble.ErrNotFound) {
-		return []string{}, nil
+		return []silo.DataNode{}, nil
 	} else if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
 	defer closer.Close()
 
-	set, err = decode(item)
+	set, err := decode(item)
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
 
-	if err := s.db.Delete([]byte(node), pebble.Sync); err != nil {
+	if err := s.db.Delete(key, pebble.Sync); err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
 
@@ -117,10 +127,15 @@ type Backend struct {
 	db *pebble.DB
 }
 
-func (b Backend) Get(node string) ([]string, error) {
-	item, closer, err := b.db.Get([]byte(node))
+func (b Backend) Get(node silo.DataNode) ([]silo.DataNode, error) {
+	key, err := node.Binary()
+	if err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+
+	item, closer, err := b.db.Get(key)
 	if errors.Is(err, pebble.ErrNotFound) {
-		return []string{}, nil
+		return []silo.DataNode{}, nil
 	} else if err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
@@ -130,7 +145,7 @@ func (b Backend) Get(node string) ([]string, error) {
 	return decode(item)
 }
 
-func (b Backend) Store(key string, value string) error {
+func (b Backend) Store(key silo.DataNode, value silo.DataNode) error {
 	nodes, err := b.Get(key)
 	if err != nil {
 		return fmt.Errorf("%w", err)
@@ -143,7 +158,12 @@ func (b Backend) Store(key string, value string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := b.db.Set([]byte(key), rawNodes, pebble.NoSync); err != nil {
+	rawKey, err := key.Binary()
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	if err := b.db.Set(rawKey, rawNodes, pebble.NoSync); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 

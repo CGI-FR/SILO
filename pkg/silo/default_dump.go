@@ -23,8 +23,8 @@ func NewDumpToStdout() *DumpToStdout {
 	return &DumpToStdout{}
 }
 
-func (d *DumpToStdout) Write(node string, uuid string) error {
-	println(uuid, node)
+func (d *DumpToStdout) Write(node DataNode, uuid string) error {
+	println(uuid, node.String())
 
 	return nil
 }

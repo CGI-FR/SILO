@@ -20,16 +20,16 @@ package silo
 import "github.com/cgi-fr/silo/pkg/multimap"
 
 type BackendInMemory struct {
-	links multimap.Multimap[string, string]
+	links multimap.Multimap[DataNode, DataNode]
 }
 
 func NewBackendInMemory() *BackendInMemory {
 	return &BackendInMemory{
-		links: multimap.Multimap[string, string]{},
+		links: multimap.Multimap[DataNode, DataNode]{},
 	}
 }
 
-func (b *BackendInMemory) Store(key string, value string) error {
+func (b *BackendInMemory) Store(key DataNode, value DataNode) error {
 	b.links.Add(key, value)
 
 	return nil
@@ -45,12 +45,12 @@ func (b *BackendInMemory) Close() error {
 	return nil
 }
 
-func (b *BackendInMemory) Next() (string, bool, error) {
+func (b *BackendInMemory) Next() (DataNode, bool, error) {
 	key, present := b.links.RandomKey()
 
 	return key, present, nil
 }
 
-func (b *BackendInMemory) PullAll(node string) ([]string, error) {
+func (b *BackendInMemory) PullAll(node DataNode) ([]DataNode, error) {
 	return b.links.Delete(node), nil
 }
