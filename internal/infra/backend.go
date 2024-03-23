@@ -70,20 +70,20 @@ type Snapshot struct {
 func (s Snapshot) Next() (silo.DataNode, bool, error) {
 	iter, err := s.db.NewIter(&pebble.IterOptions{}) //nolint:exhaustruct
 	if errors.Is(err, pebble.ErrNotFound) {
-		return silo.DataNode{}, false, nil
+		return silo.DataNode{Key: "", Data: ""}, false, nil
 	} else if err != nil {
-		return silo.DataNode{}, false, fmt.Errorf("%w", err)
+		return silo.DataNode{Key: "", Data: ""}, false, fmt.Errorf("%w", err)
 	}
 
 	defer iter.Close()
 
 	if !iter.First() {
-		return silo.DataNode{}, false, nil
+		return silo.DataNode{Key: "", Data: ""}, false, nil
 	}
 
 	key, err := silo.DecodeDataNode(iter.Key())
 	if err != nil {
-		return silo.DataNode{}, false, fmt.Errorf("%w", err)
+		return silo.DataNode{Key: "", Data: ""}, false, fmt.Errorf("%w", err)
 	}
 
 	return key, true, nil
