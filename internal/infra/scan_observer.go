@@ -22,38 +22,45 @@ import (
 	"time"
 
 	"github.com/cgi-fr/silo/pkg/silo"
-	"github.com/gosuri/uilive"
+	"github.com/schollz/progressbar/v3"
 )
 
 type ScanObserver struct {
-	rowCount, linkCount int
-	output              *uilive.Writer
+	rowCount  int
+	linkCount int
+	bar       *progressbar.ProgressBar
 }
 
 func NewScanObserver() *ScanObserver {
-	output := uilive.New()
-	output.Start()
-	output.RefreshInterval = time.Second
+	//nolint:gomnd
+	pgb := progressbar.NewOptions(-1,
+		progressbar.OptionSetDescription("Scanning ... "),
+		progressbar.OptionSetItsString("row"),
+		// progressbar.OptionShowCount(),
+		progressbar.OptionShowIts(),
+		progressbar.OptionSpinnerType(11),
+		progressbar.OptionThrottle(time.Millisecond*10),
+	)
 
 	return &ScanObserver{
 		rowCount:  0,
 		linkCount: 0,
-		output:    output,
+		bar:       pgb,
 	}
 }
 
 func (o *ScanObserver) IngestedRow(_ silo.DataRow) {
 	o.rowCount++
-	fmt.Fprintf(o.output, "Ingested (links/rows) : %d / %d\n", o.linkCount, o.rowCount)
-	o.output.Flush()
+	_ = o.bar.Add(1)
+	o.bar.Describe(fmt.Sprintf("Scanned %d rows, found %d links", o.rowCount, o.linkCount))
 }
 
 func (o *ScanObserver) IngestedLink(_ silo.DataLink) {
 	o.linkCount++
-	fmt.Fprintf(o.output, "Ingested (links/rows) : %d / %d\n", o.linkCount, o.rowCount)
-	o.output.Flush()
+	_ = o.bar.Add(1)
+	o.bar.Describe(fmt.Sprintf("Scanned %d rows, found %d links", o.rowCount, o.linkCount))
 }
 
 func (o *ScanObserver) Close() {
-	o.output.Stop()
+	_ = o.bar.Close()
 }
