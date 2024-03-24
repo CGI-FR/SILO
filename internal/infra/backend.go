@@ -112,7 +112,7 @@ func (s Snapshot) PullAll(node silo.DataNode) ([]silo.DataNode, error) {
 		return nil, fmt.Errorf("%w", err)
 	}
 
-	if err := s.db.Delete(key, pebble.Sync); err != nil {
+	if err := s.db.Delete(key, pebble.NoSync); err != nil {
 		return nil, fmt.Errorf("%w", err)
 	}
 
