@@ -46,7 +46,7 @@ func (d *DumpJSONLine) Write(node silo.DataNode, uuid string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	println(string(bytes))
+	fmt.Println(string(bytes))
 
 	return nil
 }

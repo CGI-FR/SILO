@@ -206,7 +206,7 @@ func NewBackend(path string) (Backend, error) {
 type BackendLogger struct{}
 
 func (l BackendLogger) Infof(format string, args ...interface{}) {
-	log.Info().Msgf(format, args...)
+	log.Debug().Msgf(format, args...)
 }
 
 func (l BackendLogger) Fatalf(format string, args ...interface{}) {
