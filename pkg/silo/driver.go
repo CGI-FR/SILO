@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
+	"github.com/rs/zerolog/log"
 )
 
 type Driver struct {
@@ -101,6 +103,8 @@ func (d *Driver) Scan(input DataRowReader) error {
 		}
 
 		links := Scan(datarow)
+
+		log.Info().Int("links", len(links)).Interface("row", datarow).Msg("datarow scanned")
 
 		for _, link := range links {
 			if err := d.backend.Store(link.E1, link.E2); err != nil {

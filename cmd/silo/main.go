@@ -23,8 +23,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/cgi-fr/silo/internal/infra"
-	"github.com/cgi-fr/silo/pkg/silo"
+	"github.com/cgi-fr/silo/internal/app/cli"
 	"github.com/mattn/go-isatty"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -67,12 +66,6 @@ There is NO WARRANTY, to the extent permitted by law.`, version, commit, buildDa
 				Str("color", colormode).
 				Msg("start SILO")
 		},
-		Args: cobra.ExactArgs(0),
-		Run: func(cmd *cobra.Command, _ []string) {
-			if err := run(cmd); err != nil {
-				log.Fatal().Err(err).Msg("end SILO")
-			}
-		},
 		PersistentPostRun: func(_ *cobra.Command, _ []string) {
 			log.Info().Int("return", 0).Msg("end SILO")
 		},
@@ -85,38 +78,13 @@ There is NO WARRANTY, to the extent permitted by law.`, version, commit, buildDa
 	rootCmd.PersistentFlags().StringVar(&colormode, "color", "auto", "use colors in log outputs : yes, no or auto")
 	rootCmd.PersistentFlags().BoolVar(&profiling, "profiling", false, "enable cpu profiling and generate a cpu.pprof file")
 
+	rootCmd.AddCommand(cli.NewScanCommand(name, os.Stderr, os.Stdout, os.Stdin))
+	rootCmd.AddCommand(cli.NewDumpCommand(name, os.Stderr, os.Stdout, os.Stdin))
+
 	if err := rootCmd.Execute(); err != nil {
 		log.Err(err).Msg("error when executing command")
 		os.Exit(1)
 	}
-}
-
-func run(_ *cobra.Command) error {
-	backend, err := infra.NewBackend("silo-pebble")
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	defer backend.Close()
-
-	writer := infra.NewDumpJSONLine()
-
-	driver := silo.NewDriver(backend, writer)
-
-	reader, err := infra.NewDataRowReaderJSONLine()
-	if err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	if err := driver.Scan(reader); err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	if err := driver.Dump(); err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
-	return nil
 }
 
 func initLog() {
