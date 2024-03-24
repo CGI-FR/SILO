@@ -38,3 +38,8 @@ type DumpWriter interface {
 	Write(node DataNode, uuid string) error
 	Close() error
 }
+
+type ScanObserver interface {
+	IngestedRow(row DataRow)
+	IngestedLink(link DataLink)
+}

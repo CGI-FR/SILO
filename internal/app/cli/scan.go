@@ -62,7 +62,10 @@ func scan(path string) error {
 		return fmt.Errorf("%w", err)
 	}
 
-	if err := driver.Scan(reader); err != nil {
+	observer := infra.NewScanObserver()
+	defer observer.Close()
+
+	if err := driver.Scan(reader, observer); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 

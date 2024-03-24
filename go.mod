@@ -11,6 +11,8 @@ require (
 	github.com/stretchr/testify v1.9.0
 )
 
+require github.com/gosuri/uilive v0.0.4
+
 require (
 	github.com/DataDog/zstd v1.4.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

@@ -89,7 +89,7 @@ func (d *Driver) dump(snapshot Snapshot, node DataNode, entity Entity) error {
 	return nil
 }
 
-func (d *Driver) Scan(input DataRowReader) error {
+func (d *Driver) Scan(input DataRowReader, observers ...ScanObserver) error {
 	defer input.Close()
 
 	for {
@@ -106,15 +106,31 @@ func (d *Driver) Scan(input DataRowReader) error {
 
 		log.Info().Int("links", len(links)).Interface("row", datarow).Msg("datarow scanned")
 
-		for _, link := range links {
-			if err := d.backend.Store(link.E1, link.E2); err != nil {
-				return fmt.Errorf("%w: %w", ErrPersistingData, err)
-			}
-
-			if err := d.backend.Store(link.E2, link.E1); err != nil {
-				return fmt.Errorf("%w: %w", ErrPersistingData, err)
-			}
+		if err := d.ingest(datarow, links, observers...); err != nil {
+			return err
 		}
+	}
+
+	return nil
+}
+
+func (d *Driver) ingest(datarow DataRow, links []DataLink, observers ...ScanObserver) error {
+	for _, link := range links {
+		if err := d.backend.Store(link.E1, link.E2); err != nil {
+			return fmt.Errorf("%w: %w", ErrPersistingData, err)
+		}
+
+		if err := d.backend.Store(link.E2, link.E1); err != nil {
+			return fmt.Errorf("%w: %w", ErrPersistingData, err)
+		}
+
+		for _, observer := range observers {
+			observer.IngestedLink(link)
+		}
+	}
+
+	for _, observer := range observers {
+		observer.IngestedRow(datarow)
 	}
 
 	return nil
