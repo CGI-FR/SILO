@@ -22,6 +22,9 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/cgi-fr/silo/pkg/silo"
 	"github.com/cockroachdb/pebble"
@@ -188,6 +191,10 @@ func (b Backend) Close() error {
 }
 
 func NewBackend(path string) (Backend, error) {
+	if err := checkDirectory(path); err != nil {
+		return Backend{}, fmt.Errorf("unable to open database %v : %w", path, err)
+	}
+
 	database, err := pebble.Open(path, &pebble.Options{Logger: BackendLogger{}}) //nolint:exhaustruct
 	if err != nil {
 		return Backend{}, fmt.Errorf("unable to open database %v : %w", path, err)
@@ -204,4 +211,39 @@ func (l BackendLogger) Infof(format string, args ...interface{}) {
 
 func (l BackendLogger) Fatalf(format string, args ...interface{}) {
 	log.Error().Msgf(format, args...)
+}
+
+var ErrPathIsNotValid = errors.New("path is not valid")
+
+func checkDirectory(path string) error {
+	// if path does not exists => ok
+	if stats, err := os.Stat(path); os.IsNotExist(err) {
+		return nil
+	} else if !stats.IsDir() {
+		// if path exists but is file => ko
+		return fmt.Errorf("%w '%s'", ErrPathIsNotValid, path)
+	}
+
+	dir, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+	defer dir.Close()
+
+	// if path is empty directory => ok
+	if _, err := dir.Readdirnames(1); errors.Is(err, io.EOF) {
+		return nil
+	} else if err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	// if path is not empty but CURRENT file does not exists => ko
+	if stats, err := os.Stat(filepath.Join(path, "CURRENT")); os.IsNotExist(err) {
+		return fmt.Errorf("%w '%s'", ErrPathIsNotValid, path)
+	} else if stats.IsDir() {
+		// if CURRENT exists but is a directory => ko
+		return fmt.Errorf("%w '%s'", ErrPathIsNotValid, path)
+	}
+
+	return nil
 }
