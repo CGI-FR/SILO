@@ -18,12 +18,16 @@
 package infra
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/cgi-fr/silo/pkg/silo"
 	"github.com/goccy/go-json"
 )
+
+const linebreak byte = 10
 
 type DataRowReaderJSONLine struct {
 	decoder *json.Decoder
@@ -57,4 +61,54 @@ func (drr *DataRowReaderJSONLine) ReadDataRow() (silo.DataRow, error) {
 
 func (drr *DataRowReaderJSONLine) Close() error {
 	return nil
+}
+
+type DataRowReaderWriterJSONLine struct {
+	input  *bufio.Scanner
+	output *bufio.Writer
+}
+
+func NewDataRowReaderWriterJSONLine(input io.Reader, output io.Writer) *DataRowReaderWriterJSONLine {
+	return &DataRowReaderWriterJSONLine{input: bufio.NewScanner(input), output: bufio.NewWriter(output)}
+}
+
+func (drr *DataRowReaderWriterJSONLine) ReadDataRow() (silo.DataRow, error) {
+	if drr.input.Scan() {
+		if err := drr.writeLine(); err != nil {
+			return nil, err
+		}
+
+		data := silo.DataRow{}
+		if err := json.UnmarshalNoEscape(drr.input.Bytes(), &data); err != nil {
+			return nil, fmt.Errorf("%w", err)
+		}
+
+		return data, nil
+	}
+
+	if err := drr.input.Err(); err != nil {
+		return nil, fmt.Errorf("%w", err)
+	}
+
+	return nil, nil
+}
+
+func (drr *DataRowReaderWriterJSONLine) writeLine() error {
+	if _, err := drr.output.Write(drr.input.Bytes()); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	if err := drr.output.WriteByte(linebreak); err != nil {
+		return fmt.Errorf("%w", err)
+	}
+
+	return nil
+}
+
+func (drr *DataRowReaderWriterJSONLine) Close() error {
+	if drr.output == nil {
+		return nil
+	}
+
+	return fmt.Errorf("%w", drr.output.Flush())
 }

@@ -28,17 +28,21 @@ import (
 )
 
 func NewScanCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.File) *cobra.Command {
+	var passthrough bool
+
 	cmd := &cobra.Command{ //nolint:exhaustruct
 		Use:     "scan path",
 		Short:   "Ingest data from stdin and update silo database stored in given path",
-		Example: "  " + parent + " scan clients",
+		Example: "  lino pull database --table client | " + parent + " scan clients",
 		Args:    cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
-			if err := scan(args[0]); err != nil {
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := scan(cmd, args[0], passthrough); err != nil {
 				log.Fatal().Err(err).Int("return", 1).Msg("end SILO")
 			}
 		},
 	}
+
+	cmd.Flags().BoolVarP(&passthrough, "passthrough", "p", false, "pass stdin to stdout")
 
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
@@ -47,7 +51,7 @@ func NewScanCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.F
 	return cmd
 }
 
-func scan(path string) error {
+func scan(cmd *cobra.Command, path string, passthrough bool) error {
 	backend, err := infra.NewBackend(path)
 	if err != nil {
 		return fmt.Errorf("%w", err)
@@ -57,15 +61,26 @@ func scan(path string) error {
 
 	driver := silo.NewDriver(backend, nil)
 
-	reader, err := infra.NewDataRowReaderJSONLine()
+	var reader silo.DataRowReader
+
+	if passthrough {
+		reader = infra.NewDataRowReaderWriterJSONLine(cmd.InOrStdin(), cmd.OutOrStdout())
+	} else {
+		reader, err = infra.NewDataRowReaderJSONLine()
+	}
+
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
-	observer := infra.NewScanObserver()
-	defer observer.Close()
+	if !passthrough {
+		observer := infra.NewScanObserver()
+		defer observer.Close()
 
-	if err := driver.Scan(reader, observer); err != nil {
+		if err := driver.Scan(reader, observer); err != nil {
+			return fmt.Errorf("%w", err)
+		}
+	} else if err := driver.Scan(reader); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 
