@@ -78,8 +78,18 @@ There is NO WARRANTY, to the extent permitted by law.`, version, commit, buildDa
 	rootCmd.PersistentFlags().StringVar(&colormode, "color", "auto", "use colors in log outputs : yes, no or auto")
 	rootCmd.PersistentFlags().BoolVar(&profiling, "profiling", false, "enable cpu profiling and generate a cpu.pprof file")
 
-	rootCmd.AddCommand(cli.NewScanCommand(name, os.Stderr, os.Stdout, os.Stdin))
-	rootCmd.AddCommand(cli.NewDumpCommand(name, os.Stderr, os.Stdout, os.Stdin))
+	scanCmd := cli.NewScanCommand(name, os.Stderr, os.Stdout, os.Stdin)
+	dumpCmd := cli.NewDumpCommand(name, os.Stderr, os.Stdout, os.Stdin)
+
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    "main",
+		Title: "Main Commands:",
+	})
+
+	scanCmd.GroupID = "main"
+	dumpCmd.GroupID = "main"
+
+	rootCmd.AddCommand(scanCmd, dumpCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		log.Err(err).Msg("error when executing command")
