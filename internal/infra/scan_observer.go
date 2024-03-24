@@ -40,6 +40,8 @@ func NewScanObserver() *ScanObserver {
 		progressbar.OptionShowIts(),
 		progressbar.OptionSpinnerType(11),
 		progressbar.OptionThrottle(time.Millisecond*10),
+		progressbar.OptionOnCompletion(func() { fmt.Println() }),
+		// progressbar.OptionShowDescriptionAtLineEnd(),
 	)
 
 	return &ScanObserver{
