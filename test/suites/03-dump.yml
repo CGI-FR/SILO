@@ -18,7 +18,7 @@ testcases:
 
   - name: full silo
     steps:
-      - script: silo dump ../silos/full
+      - script: silo dump ../silos/full | jq -r .uuid
         assertions:
           - result.systemout ShouldEqual "2"
           - result.code ShouldEqual 0
