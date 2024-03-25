@@ -1,0 +1,17 @@
+# Venom Test Suite definition
+# Check Venom documentation for more information : https://github.com/ovh/venom
+name: scan
+testcases:
+  - name: no arguments
+    steps:
+      - script: silo scan
+        assertions:
+          - result.systemerr ShouldContainSubstring "accepts 1 arg(s), received 0"
+          - result.code ShouldEqual 1
+
+  - name: invalid silo
+    steps:
+      - script: silo scan ../silos/invalid
+        assertions:
+          - result.systemerr ShouldContainSubstring "path is not valid"
+          - result.code ShouldEqual 1
