@@ -18,14 +18,14 @@ testcases:
 
   - name: full silo
     steps:
-      - script: silo dump ../silos/full | jq -r .uuid
+      - script: silo dump ../silos/full | jq -r '.uuid' | uniq | wc -l
         assertions:
           - result.systemout ShouldEqual "2"
           - result.code ShouldEqual 0
 
   - name: sparse silo
     steps:
-      - script: silo dump ../silos/sparse | jq .uuid | uniq | wc -l
+      - script: silo dump ../silos/sparse | jq -r '.uuid' | uniq | wc -l
         assertions:
           - result.systemout ShouldEqual "1"
           - result.code ShouldEqual 0
