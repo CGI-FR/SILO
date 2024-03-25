@@ -1,38 +1,31 @@
 # Venom Test Suite definition
 # Check Venom documentation for more information : https://github.com/ovh/venom
-name: scan
+name: dump
 testcases:
   - name: no arguments
     steps:
-      - script: silo scan
+      - script: silo dump
         assertions:
           - result.systemerr ShouldContainSubstring "accepts 1 arg(s), received 0"
           - result.code ShouldEqual 1
 
   - name: invalid silo
     steps:
-      - script: silo scan ../silos/invalid
+      - script: silo dump ../silos/invalid
         assertions:
           - result.systemerr ShouldContainSubstring "path is not valid"
           - result.code ShouldEqual 1
 
   - name: full silo
     steps:
-      - script: silo scan ../silos/full < ../data/clients_full.jsonl
+      - script: silo dump ../silos/full | jq .uuid | uniq | wc -l
         assertions:
-          - result.systemout ShouldContainSubstring "Scanned 2 rows, found 6 links"
+          - result.systemout ShouldEqual "2"
           - result.code ShouldEqual 0
 
   - name: sparse silo
     steps:
-      - script: silo scan ../silos/sparse < ../data/clients_sparse.jsonl
+      - script: silo dump ../silos/sparse | jq .uuid | uniq | wc -l
         assertions:
-          - result.systemout ShouldContainSubstring "Scanned 3 rows, found 3 links"
-          - result.code ShouldEqual 0
-
-  - name: update silo
-    steps:
-      - script: silo scan ../silos/sparse < ../data/clients_sparse.jsonl
-        assertions:
-          - result.systemout ShouldContainSubstring "Scanned 3 rows, found 3 links"
+          - result.systemout ShouldEqual "1"
           - result.code ShouldEqual 0
