@@ -1,8 +1,16 @@
-# SILO
+![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/CGI-FR/SILO/ci.yml?branch=main)
+[![Go Report Card](https://goreportcard.com/badge/github.com/cgi-fr/silo)](https://goreportcard.com/report/github.com/cgi-fr/silo)
+![GitHub all releases](https://img.shields.io/github/downloads/CGI-FR/SILO/total)
+![GitHub](https://img.shields.io/github/license/CGI-FR/SILO)
+![GitHub Repo stars](https://img.shields.io/github/stars/CGI-FR/SILO)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/CGI-FR/SILO)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/CGI-FR/SILO)
 
-SILO (Sparse Input Linked Output) is an open-source command-line interface (CLI) tool designed for processing data in JSONLine format. It provides functionality to ingest data from standard input (stdin) and isolate entites (which are groups of related values) into a file, allowing users to create a referential of all entities discovered within the JSONLine data.
+# SILO - Sparse Input Linked Output
 
-SILO can be used in addition to LINO and PIMO tools to generate consistency sources.
+SILO is an open-source command-line interface (CLI) tool designed for processing data in JSONLine format. It provides functionality to ingest data from standard input (stdin) and isolate entites (which are groups of related values) into a file, allowing users to create a referential of all entities discovered within the JSONLine data.
+
+SILO can be used in addition to LINO and PIMO tools to generate consistency sources accross multiple databases.
 
 Here is an short example where SILO can be useful :
 
