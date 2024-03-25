@@ -36,3 +36,11 @@ testcases:
         assertions:
           - result.systemout ShouldContainSubstring "Scanned 3 rows, found 3 links"
           - result.code ShouldEqual 0
+
+  - name: passthrough
+    steps:
+      - script: silo scan -p ../silos/full < ../data/clients_full.jsonl
+        assertions:
+          - result.systemout ShouldNotContainSubstring "Scanned 2 rows, found 6 links"
+          - result.systemout ShouldContainSubstring '{"ID_CLIENT":"0002","EMAIL_CLIENT":"jane.doe@domain.com","ACCOUNT_NUMBER":2}'
+          - result.code ShouldEqual 0
