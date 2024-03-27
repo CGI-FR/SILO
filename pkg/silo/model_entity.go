@@ -31,16 +31,20 @@ const (
 )
 
 type Entity struct {
-	nodes  map[DataNode]int
-	counts map[string]int
-	uuid   string
+	include []string
+	nodes   map[DataNode]int
+	counts  map[string]int
+	uuid    string
+	writer  DumpWriter
 }
 
-func NewEntity(nodes ...DataNode) Entity {
+func NewEntity(include []string, writer DumpWriter, nodes ...DataNode) Entity {
 	entity := Entity{
-		nodes:  make(map[DataNode]int, defaultEntitySize),
-		counts: make(map[string]int, defaultEntitySize),
-		uuid:   uuid.NewString(),
+		include: include,
+		nodes:   make(map[DataNode]int, defaultEntitySize),
+		counts:  make(map[string]int, defaultEntitySize),
+		uuid:    uuid.NewString(),
+		writer:  writer,
 	}
 	for _, node := range nodes {
 		entity.Append(node)

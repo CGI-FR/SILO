@@ -19,25 +19,27 @@ package silo
 
 import "errors"
 
-type Config struct {
-	Include map[string]bool
-	Aliases map[string]string
+type config struct {
+	include     map[string]bool
+	includeList []string
+	aliases     map[string]string
 }
 
-func DefaultConfig() *Config {
-	config := Config{
-		Include: map[string]bool{},
-		Aliases: map[string]string{},
+func DefaultConfig() *config {
+	config := config{
+		include:     map[string]bool{},
+		includeList: []string{},
+		aliases:     map[string]string{},
 	}
 
 	return &config
 }
 
-func (cfg *Config) validate() error {
+func (cfg *config) validate() error {
 	var errs []error
 
-	for key := range cfg.Aliases {
-		if _, ok := cfg.Include[key]; !ok && len(cfg.Include) > 0 {
+	for key := range cfg.aliases {
+		if _, ok := cfg.include[key]; !ok && len(cfg.include) > 0 {
 			errs = append(errs, &ConfigScanAliasIsNotIncludedError{alias: key})
 		}
 	}

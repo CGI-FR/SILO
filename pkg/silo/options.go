@@ -21,19 +21,19 @@ type Option interface {
 	applier
 }
 
-type option func(*Config) error
+type option func(*config) error
 
-func (f option) apply(cfg *Config) error {
+func (f option) apply(cfg *config) error {
 	return f(cfg)
 }
 
 type applier interface {
-	apply(cfg *Config) error
+	apply(cfg *config) error
 }
 
 func Alias(key, alias string) Option { //nolint:ireturn
-	applier := func(cfg *Config) error {
-		cfg.Aliases[key] = alias
+	applier := func(cfg *config) error {
+		cfg.aliases[key] = alias
 
 		return nil
 	}
@@ -42,8 +42,12 @@ func Alias(key, alias string) Option { //nolint:ireturn
 }
 
 func Include(key string) Option { //nolint:ireturn
-	applier := func(cfg *Config) error {
-		cfg.Include[key] = true
+	applier := func(cfg *config) error {
+		if _, exist := cfg.include[key]; !exist {
+			cfg.includeList = append(cfg.includeList, key)
+		}
+
+		cfg.include[key] = true
 
 		return nil
 	}
@@ -52,9 +56,9 @@ func Include(key string) Option { //nolint:ireturn
 }
 
 func WithAliases(aliases map[string]string) Option { //nolint:ireturn
-	applier := func(cfg *Config) error {
+	applier := func(cfg *config) error {
 		for key, alias := range aliases {
-			cfg.Aliases[key] = alias
+			cfg.aliases[key] = alias
 		}
 
 		return nil
@@ -64,9 +68,13 @@ func WithAliases(aliases map[string]string) Option { //nolint:ireturn
 }
 
 func WithKeys(keys []string) Option { //nolint:ireturn
-	applier := func(cfg *Config) error {
+	applier := func(cfg *config) error {
 		for _, key := range keys {
-			cfg.Include[key] = true
+			if _, exist := cfg.include[key]; !exist {
+				cfg.includeList = append(cfg.includeList, key)
+			}
+
+			cfg.include[key] = true
 		}
 
 		return nil

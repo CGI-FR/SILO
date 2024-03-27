@@ -26,7 +26,7 @@ import (
 )
 
 type Driver struct {
-	*Config
+	*config
 	backend Backend
 	writer  DumpWriter
 }
@@ -52,7 +52,7 @@ func NewDriver(backend Backend, writer DumpWriter, options ...Option) *Driver {
 	return &Driver{
 		backend: backend,
 		writer:  writer,
-		Config:  config,
+		config:  config,
 	}
 }
 
@@ -71,7 +71,7 @@ func (d *Driver) Dump() error {
 			break
 		}
 
-		entity := NewEntity(entryNode)
+		entity := NewEntity(d.config.includeList, d.writer, entryNode)
 
 		if err := d.writer.Write(entryNode, entity.UUID()); err != nil {
 			return fmt.Errorf("%w", err)
@@ -167,8 +167,8 @@ func (d *Driver) scan(datarow DataRow) ([]DataNode, []DataLink) {
 	links := []DataLink{}
 
 	for key, value := range datarow {
-		if _, included := d.Config.Include[key]; value != nil && (included || len(d.Config.Include) == 0) {
-			if alias, exist := d.Config.Aliases[key]; exist {
+		if _, included := d.config.include[key]; value != nil && (included || len(d.config.include) == 0) {
+			if alias, exist := d.config.aliases[key]; exist {
 				key = alias
 			}
 
