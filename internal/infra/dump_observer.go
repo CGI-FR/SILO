@@ -74,7 +74,7 @@ func (o *DumpObserver) Entity(status silo.Status, _ map[string]int) {
 
 	_ = o.bar.Add(1)
 
-	o.bar.Describe(fmt.Sprintf("Dumped %d entities / complete=%d / incomplete=%d / inconsistent=%d / empty=%d",
+	o.bar.Describe(fmt.Sprintf("Dumped %d entities / complete=%d / consistent=%d / inconsistent=%d / empty=%d",
 		o.countTotal,
 		o.countComplete,
 		o.countConsistent,
