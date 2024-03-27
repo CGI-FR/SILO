@@ -37,7 +37,7 @@ func NewScanCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.F
 	cmd := &cobra.Command{ //nolint:exhaustruct
 		Use:     "scan path",
 		Short:   "Ingest data from stdin and update silo database stored in given path",
-		Example: "  lino pull database --table client | " + parent + " scan clients",
+		Example: "  " + parent + " scan clients < clients.jsonl",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := scan(cmd, args[0], passthrough, include, aliases); err != nil {
@@ -49,6 +49,8 @@ func NewScanCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.F
 	cmd.Flags().BoolVarP(&passthrough, "passthrough", "p", false, "pass stdin to stdout")
 	cmd.Flags().StringSliceVarP(&include, "include", "i", []string{}, "include only these columns, exclude all others")
 	cmd.Flags().StringToStringVarP(&aliases, "alias", "a", map[string]string{}, "use given aliases for each columns")
+
+	cmd.Flags().SortFlags = false
 
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
