@@ -121,11 +121,11 @@ func (d *Driver) Scan(input DataRowReader, observers ...ScanObserver) error {
 			break
 		}
 
-		links := d.scan(datarow)
+		nodes, links := d.scan(datarow)
 
 		log.Info().Int("links", len(links)).Interface("row", datarow).Msg("datarow scanned")
 
-		if err := d.ingest(datarow, links, observers...); err != nil {
+		if err := d.ingest(datarow, nodes, links, observers...); err != nil {
 			return err
 		}
 	}
@@ -133,20 +133,25 @@ func (d *Driver) Scan(input DataRowReader, observers ...ScanObserver) error {
 	return nil
 }
 
-func (d *Driver) ingest(datarow DataRow, links []DataLink, observers ...ScanObserver) error {
+func (d *Driver) ingest(datarow DataRow, nodes []DataNode, links []DataLink, observers ...ScanObserver) error {
 	for _, link := range links {
 		if err := d.backend.Store(link.E1, link.E2); err != nil {
 			return fmt.Errorf("%w: %w", ErrPersistingData, err)
 		}
 
-		if link.E1 != link.E2 {
-			if err := d.backend.Store(link.E2, link.E1); err != nil {
-				return fmt.Errorf("%w: %w", ErrPersistingData, err)
-			}
+		if err := d.backend.Store(link.E2, link.E1); err != nil {
+			return fmt.Errorf("%w: %w", ErrPersistingData, err)
+		}
 
-			for _, observer := range observers {
-				observer.IngestedLink(link)
-			}
+		for _, observer := range observers {
+			observer.IngestedLink(link)
+		}
+	}
+
+	// optimization : self reference is useful only if no link has been found, and nodes will contain a single node
+	if len(links) == 0 && len(nodes) > 0 {
+		if err := d.backend.Store(nodes[0], nodes[0]); err != nil {
+			return fmt.Errorf("%w: %w", ErrPersistingData, err)
 		}
 	}
 
@@ -157,22 +162,18 @@ func (d *Driver) ingest(datarow DataRow, links []DataLink, observers ...ScanObse
 	return nil
 }
 
-func (cfg *Config) scan(datarow DataRow) []DataLink {
+func (d *Driver) scan(datarow DataRow) ([]DataNode, []DataLink) {
 	nodes := []DataNode{}
 	links := []DataLink{}
 
 	for key, value := range datarow {
-		if _, included := cfg.Include[key]; value != nil && (included || len(cfg.Include) == 0) {
-			if alias, exist := cfg.Aliases[key]; exist {
+		if _, included := d.Config.Include[key]; value != nil && (included || len(d.Config.Include) == 0) {
+			if alias, exist := d.Config.Aliases[key]; exist {
 				key = alias
 			}
 
 			nodes = append(nodes, DataNode{Key: key, Data: value})
 		}
-	}
-
-	if len(nodes) == 1 {
-		links = append(links, DataLink{E1: nodes[0], E2: nodes[0]})
 	}
 
 	// find all pairs in nodes
@@ -182,5 +183,5 @@ func (cfg *Config) scan(datarow DataRow) []DataLink {
 		}
 	}
 
-	return links
+	return nodes, links
 }
