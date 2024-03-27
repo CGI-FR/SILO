@@ -16,8 +16,8 @@ Types of changes
 
 ## [0.2.0]
 
-- `Added` flag `--only` (short `-o`) to only scan a specific list of fields
-- `Added` flag `--alias` (short `-a`) to rename fields on the fly
+- `Added` flag `--include` (short `-i`) to only scan a specific list of fields, this flag is repeatable
+- `Added` flag `--alias` (short `-a`) to rename fields on the fly, this flag is repeatable
 - `Fixed` self reference link are no longer counted in the links counter while scanning
 
 ## [0.1.0]
