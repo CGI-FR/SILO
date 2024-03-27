@@ -33,7 +33,7 @@ type Driver struct {
 
 func NewDriver(backend Backend, writer DumpWriter, options ...Option) *Driver {
 	errs := []error{}
-	config := DefaultConfig()
+	config := newConfig()
 
 	for _, option := range options {
 		if err := option.apply(config); err != nil {
@@ -56,7 +56,7 @@ func NewDriver(backend Backend, writer DumpWriter, options ...Option) *Driver {
 	}
 }
 
-func (d *Driver) Dump() error {
+func (d *Driver) Dump(observers ...DumpObserver) error {
 	snapshot := d.backend.Snapshot()
 
 	defer snapshot.Close()
@@ -81,7 +81,13 @@ func (d *Driver) Dump() error {
 			return fmt.Errorf("%w", err)
 		}
 
-		entity.Finalize()
+		status, counts := entity.Finalize()
+
+		for _, observer := range observers {
+			if observer != nil {
+				observer.Entity(status, counts)
+			}
+		}
 	}
 
 	return nil

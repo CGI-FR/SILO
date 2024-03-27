@@ -24,11 +24,13 @@ import (
 
 const defaultEntitySize = 10
 
+type Status string
+
 const (
-	statusEntityComplete     = "complete"
-	statusEntityConsistent   = "consistent"
-	statusEntityInconsistent = "inconsistent"
-	statusEntityEmpty        = "empty"
+	StatusEntityComplete     Status = "complete"
+	StatusEntityConsistent   Status = "consistent"
+	StatusEntityInconsistent Status = "inconsistent"
+	StatusEntityEmpty        Status = "empty"
 )
 
 type Entity struct {
@@ -74,9 +76,10 @@ func (s Entity) UUID() string {
 	return s.uuid
 }
 
-func (s Entity) Finalize() {
-	msg := log.Info().Str("status", statusEntityConsistent)
+func (s Entity) Finalize() (Status, map[string]int) {
+	msg := log.Info().Str("status", string(StatusEntityConsistent))
 
+	status := StatusEntityConsistent
 	counts := s.counts
 
 	if len(s.include) > 0 {
@@ -89,14 +92,17 @@ func (s Entity) Finalize() {
 	}
 
 	if len(counts) == len(s.include) && len(s.include) > 0 {
-		msg.Str("status", statusEntityComplete)
+		msg.Str("status", string(StatusEntityComplete))
+		status = StatusEntityComplete
 	} else if len(counts) == 0 {
-		msg.Str("status", statusEntityEmpty)
+		msg.Str("status", string(StatusEntityEmpty))
+		status = StatusEntityEmpty
 	}
 
 	for _, count := range counts {
 		if count > 1 {
-			msg = log.Warn().Str("status", statusEntityInconsistent)
+			msg = log.Warn().Str("status", string(StatusEntityInconsistent))
+			status = StatusEntityInconsistent
 
 			break
 		}
@@ -109,4 +115,6 @@ func (s Entity) Finalize() {
 	}
 
 	msg.Msg("entity identified")
+
+	return status, counts
 }

@@ -25,7 +25,7 @@ type config struct {
 	aliases     map[string]string
 }
 
-func DefaultConfig() *config {
+func newConfig() *config {
 	config := config{
 		include:     map[string]bool{},
 		includeList: []string{},
