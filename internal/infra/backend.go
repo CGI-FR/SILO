@@ -68,7 +68,7 @@ func encode(items []silo.DataNode) ([]byte, error) {
 }
 
 type Snapshot struct {
-	db *pebble.Batch
+	db *pebble.DB
 }
 
 func (s Snapshot) Next() (silo.DataNode, bool, error) {
@@ -120,10 +120,6 @@ func (s Snapshot) PullAll(node silo.DataNode) ([]silo.DataNode, error) {
 }
 
 func (s Snapshot) Close() error {
-	if err := s.db.Close(); err != nil {
-		return fmt.Errorf("%w", err)
-	}
-
 	return nil
 }
 
@@ -175,7 +171,7 @@ func (b Backend) Store(key silo.DataNode, value silo.DataNode) error {
 }
 
 func (b Backend) Snapshot() silo.Snapshot { //nolint:ireturn
-	return Snapshot{b.db.NewIndexedBatch()}
+	return Snapshot(b)
 }
 
 func (b Backend) Close() error {
