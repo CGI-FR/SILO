@@ -43,3 +43,7 @@ type ScanObserver interface {
 	IngestedRow(row DataRow)
 	IngestedLink(link DataLink)
 }
+
+type DumpObserver interface {
+	Entity(status Status, counts map[string]int)
+}

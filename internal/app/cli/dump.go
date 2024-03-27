@@ -28,17 +28,27 @@ import (
 )
 
 func NewDumpCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.File) *cobra.Command {
+	var (
+		include []string
+		watch   bool
+	)
+
 	cmd := &cobra.Command{ //nolint:exhaustruct
 		Use:     "dump path",
 		Short:   "Dump silo database stored in given path into stdout",
 		Example: "  " + parent + " dump clients",
 		Args:    cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			if err := dump(args[0]); err != nil {
+			if err := dump(args[0], include, watch); err != nil {
 				log.Fatal().Err(err).Int("return", 1).Msg("end SILO")
 			}
 		},
 	}
+
+	cmd.Flags().StringSliceVarP(&include, "include", "i", []string{}, "include only these columns, exclude all others")
+	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "watch statistics about dumped entities in stderr")
+
+	cmd.Flags().SortFlags = false
 
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
@@ -47,7 +57,7 @@ func NewDumpCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.F
 	return cmd
 }
 
-func dump(path string) error {
+func dump(path string, include []string, watch bool) error {
 	backend, err := infra.NewBackend(path)
 	if err != nil {
 		return fmt.Errorf("%w", err)
@@ -55,9 +65,16 @@ func dump(path string) error {
 
 	defer backend.Close()
 
-	driver := silo.NewDriver(backend, infra.NewDumpJSONLine())
+	driver := silo.NewDriver(backend, infra.NewDumpJSONLine(), silo.WithKeys(include))
 
-	if err := driver.Dump(); err != nil {
+	if watch {
+		observer := infra.NewDumpObserver()
+		defer observer.Close()
+
+		if err := driver.Dump(observer); err != nil {
+			return fmt.Errorf("%w", err)
+		}
+	} else if err := driver.Dump(); err != nil {
 		return fmt.Errorf("%w", err)
 	}
 

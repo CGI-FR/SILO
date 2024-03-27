@@ -27,14 +27,14 @@ testcases:
     steps:
       - script: silo scan ../silos/sparse < ../data/clients_sparse.jsonl
         assertions:
-          - result.systemout ShouldContainSubstring "Scanned 3 rows, found 3 links"
+          - result.systemout ShouldContainSubstring "Scanned 3 rows, found 2 links"
           - result.code ShouldEqual 0
 
   - name: update silo
     steps:
       - script: silo scan ../silos/sparse < ../data/clients_sparse.jsonl
         assertions:
-          - result.systemout ShouldContainSubstring "Scanned 3 rows, found 3 links"
+          - result.systemout ShouldContainSubstring "Scanned 3 rows, found 2 links"
           - result.code ShouldEqual 0
 
   - name: passthrough

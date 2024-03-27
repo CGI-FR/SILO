@@ -26,18 +26,37 @@ import (
 )
 
 type Driver struct {
+	*config
 	backend Backend
 	writer  DumpWriter
 }
 
-func NewDriver(backend Backend, writer DumpWriter) *Driver {
+func NewDriver(backend Backend, writer DumpWriter, options ...Option) *Driver {
+	errs := []error{}
+	config := newConfig()
+
+	for _, option := range options {
+		if err := option.apply(config); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if err := config.validate(); err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		panic(errs)
+	}
+
 	return &Driver{
 		backend: backend,
 		writer:  writer,
+		config:  config,
 	}
 }
 
-func (d *Driver) Dump() error {
+func (d *Driver) Dump(observers ...DumpObserver) error {
 	snapshot := d.backend.Snapshot()
 
 	defer snapshot.Close()
@@ -52,9 +71,9 @@ func (d *Driver) Dump() error {
 			break
 		}
 
-		entity := NewEntity(entryNode)
+		entity := NewEntity(d.config.includeList, entryNode)
 
-		if err := d.writer.Write(entryNode, entity.UUID()); err != nil {
+		if err := d.write(entryNode, entity.UUID()); err != nil {
 			return fmt.Errorf("%w", err)
 		}
 
@@ -62,7 +81,13 @@ func (d *Driver) Dump() error {
 			return fmt.Errorf("%w", err)
 		}
 
-		entity.Finalize()
+		status, counts := entity.Finalize()
+
+		for _, observer := range observers {
+			if observer != nil {
+				observer.Entity(status, counts)
+			}
+		}
 	}
 
 	return nil
@@ -76,13 +101,23 @@ func (d *Driver) dump(snapshot Snapshot, node DataNode, entity Entity) error {
 
 	for _, connectedNode := range connectedNodes {
 		if entity.Append(connectedNode) {
-			if err := d.writer.Write(connectedNode, entity.UUID()); err != nil {
+			if err := d.write(connectedNode, entity.UUID()); err != nil {
 				return fmt.Errorf("%w", err)
 			}
 
 			if err := d.dump(snapshot, connectedNode, entity); err != nil {
 				return fmt.Errorf("%w", err)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (d *Driver) write(node DataNode, uuid string) error {
+	if _, included := d.config.include[node.Key]; included || len(d.config.include) == 0 {
+		if err := d.writer.Write(node, uuid); err != nil {
+			return fmt.Errorf("%w", err)
 		}
 	}
 
@@ -102,11 +137,11 @@ func (d *Driver) Scan(input DataRowReader, observers ...ScanObserver) error {
 			break
 		}
 
-		links := Scan(datarow)
+		nodes, links := d.scan(datarow)
 
 		log.Info().Int("links", len(links)).Interface("row", datarow).Msg("datarow scanned")
 
-		if err := d.ingest(datarow, links, observers...); err != nil {
+		if err := d.ingest(datarow, nodes, links, observers...); err != nil {
 			return err
 		}
 	}
@@ -114,7 +149,7 @@ func (d *Driver) Scan(input DataRowReader, observers ...ScanObserver) error {
 	return nil
 }
 
-func (d *Driver) ingest(datarow DataRow, links []DataLink, observers ...ScanObserver) error {
+func (d *Driver) ingest(datarow DataRow, nodes []DataNode, links []DataLink, observers ...ScanObserver) error {
 	for _, link := range links {
 		if err := d.backend.Store(link.E1, link.E2); err != nil {
 			return fmt.Errorf("%w: %w", ErrPersistingData, err)
@@ -129,6 +164,13 @@ func (d *Driver) ingest(datarow DataRow, links []DataLink, observers ...ScanObse
 		}
 	}
 
+	// optimization : self reference is useful only if no link has been found, and nodes will contain a single node
+	if len(links) == 0 && len(nodes) > 0 {
+		if err := d.backend.Store(nodes[0], nodes[0]); err != nil {
+			return fmt.Errorf("%w: %w", ErrPersistingData, err)
+		}
+	}
+
 	for _, observer := range observers {
 		observer.IngestedRow(datarow)
 	}
@@ -136,18 +178,18 @@ func (d *Driver) ingest(datarow DataRow, links []DataLink, observers ...ScanObse
 	return nil
 }
 
-func Scan(datarow DataRow) []DataLink {
+func (d *Driver) scan(datarow DataRow) ([]DataNode, []DataLink) {
 	nodes := []DataNode{}
 	links := []DataLink{}
 
 	for key, value := range datarow {
-		if value != nil {
+		if _, included := d.config.include[key]; value != nil && (included || len(d.config.include) == 0) {
+			if alias, exist := d.config.aliases[key]; exist {
+				key = alias
+			}
+
 			nodes = append(nodes, DataNode{Key: key, Data: value})
 		}
-	}
-
-	if len(nodes) == 1 {
-		links = append(links, DataLink{E1: nodes[0], E2: nodes[0]})
 	}
 
 	// find all pairs in nodes
@@ -157,5 +199,5 @@ func Scan(datarow DataRow) []DataLink {
 		}
 	}
 
-	return links
+	return nodes, links
 }

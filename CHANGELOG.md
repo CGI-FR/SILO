@@ -14,6 +14,13 @@ Types of changes
 - `Fixed` for any bug fixes.
 - `Security` in case of vulnerabilities.
 
+## [0.2.0]
+
+- `Added` flag `--include` (short `-i`) to only scan/dump a specific list of fields, this flag is repeatable
+- `Added` flag `--alias` (short `-a`) to rename fields on the fly, this flag is repeatable
+- `Added` flag `--watch` (short `-w`) to the dump command
+- `Fixed` self reference link are no longer counted in the links counter while scanning
+
 ## [0.1.0]
 
 - `Added` initial version

@@ -65,6 +65,34 @@ $ silo scan my-silo < input.jsonl
 
 Analysis data is persisted on disk on the `my-silo` path relative to the current directory.
 
+#### passthrough stdin to stdout
+
+Use `--passthrough` (short : `-p`) to pass input to stdout instead of diplaying informations.
+
+```console
+$ silo scan my-silo --passthrough < input.jsonl
+{"ID_CLIENT":"0001","EMAIL_CLIENT":"jonh.doe@domain.com","ACCOUNT_NUMBER":null}
+{"ID_CLIENT":null,"EMAIL_CLIENT":null,"ACCOUNT_NUMBER":"C01"}
+```
+
+#### include only specific fields/columns
+
+Use `--include <fieldname>` (short : `-i <fieldname>`, repeatable) to select only given columns to scan.
+
+```console
+$ silo scan my-silo --include ID_CLIENT --include EMAIL_CLIENT < input.jsonl
+⣾ Scanned 5 rows, found 15 links (4084 row/s) [0s]
+```
+
+#### rename fields/columns on the fly
+
+Use `--alias <fieldname>=<alias>` (short : `-a <fieldname>=<alias>`, repeatable) to rename fields before storing links.
+
+```console
+$ silo scan my-silo --alias ID_CLIENT=CLIENT --alias EMAIL_CLIENT=EMAIL < input.jsonl
+⣾ Scanned 5 rows, found 15 links (4084 row/s) [0s]
+```
+
 ### silo dump
 
 The silo dump command is used to dump each connected entity into a file. This allows users to create a referential of all entities discovered within the JSONLine data. Here's how to use it:

@@ -17,21 +17,36 @@
 
 package silo
 
-import (
-	"errors"
-	"fmt"
-)
+import "errors"
 
-var (
-	ErrReadingNextInput     = errors.New("error while reading next input")
-	ErrPersistingData       = errors.New("error while persisting data")
-	ErrReadingPersistedData = errors.New("error while reading persisted data")
-)
-
-type ConfigScanAliasIsNotIncludedError struct {
-	alias string
+type config struct {
+	include     map[string]bool
+	includeList []string
+	aliases     map[string]string
 }
 
-func (e *ConfigScanAliasIsNotIncludedError) Error() string {
-	return fmt.Sprintf("configuration error : alias [%s] is not included", e.alias)
+func newConfig() *config {
+	config := config{
+		include:     map[string]bool{},
+		includeList: []string{},
+		aliases:     map[string]string{},
+	}
+
+	return &config
+}
+
+func (cfg *config) validate() error {
+	var errs []error
+
+	for key := range cfg.aliases {
+		if _, ok := cfg.include[key]; !ok && len(cfg.include) > 0 {
+			errs = append(errs, &ConfigScanAliasIsNotIncludedError{alias: key})
+		}
+	}
+
+	if len(errs) != 0 {
+		return errors.Join(errs...)
+	}
+
+	return nil
 }

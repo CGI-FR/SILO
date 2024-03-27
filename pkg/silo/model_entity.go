@@ -24,23 +24,28 @@ import (
 
 const defaultEntitySize = 10
 
+type Status string
+
 const (
-	statusEntityOK           = "consistent"
-	statusEntityPartial      = "partial"
-	statusEntityInconsistent = "inconsistent"
+	StatusEntityComplete     Status = "complete"
+	StatusEntityConsistent   Status = "consistent"
+	StatusEntityInconsistent Status = "inconsistent"
+	StatusEntityEmpty        Status = "empty"
 )
 
 type Entity struct {
-	nodes  map[DataNode]int
-	counts map[string]int
-	uuid   string
+	include []string
+	nodes   map[DataNode]int
+	counts  map[string]int
+	uuid    string
 }
 
-func NewEntity(nodes ...DataNode) Entity {
+func NewEntity(include []string, nodes ...DataNode) Entity {
 	entity := Entity{
-		nodes:  make(map[DataNode]int, defaultEntitySize),
-		counts: make(map[string]int, defaultEntitySize),
-		uuid:   uuid.NewString(),
+		include: include,
+		nodes:   make(map[DataNode]int, defaultEntitySize),
+		counts:  make(map[string]int, defaultEntitySize),
+		uuid:    uuid.NewString(),
 	}
 	for _, node := range nodes {
 		entity.Append(node)
@@ -71,27 +76,45 @@ func (s Entity) UUID() string {
 	return s.uuid
 }
 
-//nolint:zerologlint
-func (s Entity) Finalize() {
-	msg := log.Info().Str("status", statusEntityOK)
+func (s Entity) Finalize() (Status, map[string]int) {
+	msg := log.Info().Str("status", string(StatusEntityConsistent))
 
-	for _, count := range s.counts {
+	status := StatusEntityConsistent
+	counts := s.counts
+
+	if len(s.include) > 0 {
+		counts = make(map[string]int, len(s.include))
+		for _, key := range s.include {
+			if s.counts[key] > 0 {
+				counts[key] = s.counts[key]
+			}
+		}
+	}
+
+	if len(counts) == len(s.include) && len(s.include) > 0 {
+		msg.Str("status", string(StatusEntityComplete))
+		status = StatusEntityComplete
+	} else if len(counts) == 0 {
+		msg.Str("status", string(StatusEntityEmpty))
+		status = StatusEntityEmpty
+	}
+
+	for _, count := range counts {
 		if count > 1 {
-			msg = log.Warn().Str("status", statusEntityInconsistent)
+			msg = log.Warn().Str("status", string(StatusEntityInconsistent))
+			status = StatusEntityInconsistent
 
 			break
 		}
-
-		if count == 0 {
-			msg = log.Warn().Str("status", statusEntityPartial)
-		}
 	}
 
-	msg = msg.Str("uuid", s.UUID())
+	msg.Str("uuid", s.UUID())
 
-	for id, count := range s.counts {
-		msg.Int(id, count)
+	for id, count := range counts {
+		msg.Int("count-"+id, count)
 	}
 
 	msg.Msg("entity identified")
+
+	return status, counts
 }
