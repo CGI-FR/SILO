@@ -14,6 +14,12 @@ Types of changes
 - `Fixed` for any bug fixes.
 - `Security` in case of vulnerabilities.
 
+## [0.2.0]
+
+- `Added` flag `--only` (short `-o`) to only scan a specific list of fields
+- `Added` flag `--alias` (short `-a`) to rename fields on the fly
+- `Fixed` self reference link are no longer counted in the links counter while scanning
+
 ## [0.1.0]
 
 - `Added` initial version

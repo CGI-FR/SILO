@@ -28,7 +28,11 @@ import (
 )
 
 func NewScanCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.File) *cobra.Command {
-	var passthrough bool
+	var (
+		passthrough bool
+		only        []string
+		aliases     map[string]string
+	)
 
 	cmd := &cobra.Command{ //nolint:exhaustruct
 		Use:     "scan path",
@@ -36,13 +40,15 @@ func NewScanCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.F
 		Example: "  lino pull database --table client | " + parent + " scan clients",
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if err := scan(cmd, args[0], passthrough); err != nil {
+			if err := scan(cmd, args[0], passthrough, only, aliases); err != nil {
 				log.Fatal().Err(err).Int("return", 1).Msg("end SILO")
 			}
 		},
 	}
 
 	cmd.Flags().BoolVarP(&passthrough, "passthrough", "p", false, "pass stdin to stdout")
+	cmd.Flags().StringSliceVarP(&only, "only", "o", []string{}, "only scan these columns, exclude all others")
+	cmd.Flags().StringToStringVarP(&aliases, "alias", "a", map[string]string{}, "use given aliases for each columns")
 
 	cmd.SetOut(stdout)
 	cmd.SetErr(stderr)
@@ -51,7 +57,7 @@ func NewScanCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.F
 	return cmd
 }
 
-func scan(cmd *cobra.Command, path string, passthrough bool) error {
+func scan(cmd *cobra.Command, path string, passthrough bool, only []string, aliases map[string]string) error {
 	backend, err := infra.NewBackend(path)
 	if err != nil {
 		return fmt.Errorf("%w", err)
@@ -59,7 +65,7 @@ func scan(cmd *cobra.Command, path string, passthrough bool) error {
 
 	defer backend.Close()
 
-	driver := silo.NewDriver(backend, nil)
+	driver := silo.NewDriver(backend, nil, silo.WithKeys(only), silo.WithAliases(aliases))
 
 	var reader silo.DataRowReader
 

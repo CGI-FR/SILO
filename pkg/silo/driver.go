@@ -26,14 +26,33 @@ import (
 )
 
 type Driver struct {
+	*Config
 	backend Backend
 	writer  DumpWriter
 }
 
-func NewDriver(backend Backend, writer DumpWriter) *Driver {
+func NewDriver(backend Backend, writer DumpWriter, options ...Option) *Driver {
+	errs := []error{}
+	config := DefaultConfig()
+
+	for _, option := range options {
+		if err := option.apply(config); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if err := config.validate(); err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		panic(errs)
+	}
+
 	return &Driver{
 		backend: backend,
 		writer:  writer,
+		Config:  config,
 	}
 }
 
@@ -102,7 +121,7 @@ func (d *Driver) Scan(input DataRowReader, observers ...ScanObserver) error {
 			break
 		}
 
-		links := Scan(datarow)
+		links := d.scan(datarow)
 
 		log.Info().Int("links", len(links)).Interface("row", datarow).Msg("datarow scanned")
 
@@ -120,12 +139,14 @@ func (d *Driver) ingest(datarow DataRow, links []DataLink, observers ...ScanObse
 			return fmt.Errorf("%w: %w", ErrPersistingData, err)
 		}
 
-		if err := d.backend.Store(link.E2, link.E1); err != nil {
-			return fmt.Errorf("%w: %w", ErrPersistingData, err)
-		}
+		if link.E1 != link.E2 {
+			if err := d.backend.Store(link.E2, link.E1); err != nil {
+				return fmt.Errorf("%w: %w", ErrPersistingData, err)
+			}
 
-		for _, observer := range observers {
-			observer.IngestedLink(link)
+			for _, observer := range observers {
+				observer.IngestedLink(link)
+			}
 		}
 	}
 
@@ -136,12 +157,16 @@ func (d *Driver) ingest(datarow DataRow, links []DataLink, observers ...ScanObse
 	return nil
 }
 
-func Scan(datarow DataRow) []DataLink {
+func (cfg *Config) scan(datarow DataRow) []DataLink {
 	nodes := []DataNode{}
 	links := []DataLink{}
 
 	for key, value := range datarow {
-		if value != nil {
+		if _, included := cfg.Include[key]; value != nil && (included || len(cfg.Include) == 0) {
+			if alias, exist := cfg.Aliases[key]; exist {
+				key = alias
+			}
+
 			nodes = append(nodes, DataNode{Key: key, Data: value})
 		}
 	}
