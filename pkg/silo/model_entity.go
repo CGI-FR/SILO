@@ -25,9 +25,10 @@ import (
 const defaultEntitySize = 10
 
 const (
-	statusEntityOK           = "consistent"
-	statusEntityPartial      = "partial"
+	statusEntityComplete     = "complete"
+	statusEntityConsistent   = "consistent"
 	statusEntityInconsistent = "inconsistent"
+	statusEntityEmpty        = "empty"
 )
 
 type Entity struct {
@@ -35,16 +36,14 @@ type Entity struct {
 	nodes   map[DataNode]int
 	counts  map[string]int
 	uuid    string
-	writer  DumpWriter
 }
 
-func NewEntity(include []string, writer DumpWriter, nodes ...DataNode) Entity {
+func NewEntity(include []string, nodes ...DataNode) Entity {
 	entity := Entity{
 		include: include,
 		nodes:   make(map[DataNode]int, defaultEntitySize),
 		counts:  make(map[string]int, defaultEntitySize),
 		uuid:    uuid.NewString(),
-		writer:  writer,
 	}
 	for _, node := range nodes {
 		entity.Append(node)
@@ -75,26 +74,38 @@ func (s Entity) UUID() string {
 	return s.uuid
 }
 
-//nolint:zerologlint
 func (s Entity) Finalize() {
-	msg := log.Info().Str("status", statusEntityOK)
+	msg := log.Info().Str("status", statusEntityConsistent)
 
-	for _, count := range s.counts {
+	counts := s.counts
+
+	if len(s.include) > 0 {
+		counts = make(map[string]int, len(s.include))
+		for _, key := range s.include {
+			if s.counts[key] > 0 {
+				counts[key] = s.counts[key]
+			}
+		}
+	}
+
+	if len(counts) == len(s.include) && len(s.include) > 0 {
+		msg.Str("status", statusEntityComplete)
+	} else if len(counts) == 0 {
+		msg.Str("status", statusEntityEmpty)
+	}
+
+	for _, count := range counts {
 		if count > 1 {
 			msg = log.Warn().Str("status", statusEntityInconsistent)
 
 			break
 		}
-
-		if count == 0 {
-			msg = log.Warn().Str("status", statusEntityPartial)
-		}
 	}
 
-	msg = msg.Str("uuid", s.UUID())
+	msg.Str("uuid", s.UUID())
 
-	for id, count := range s.counts {
-		msg.Int(id, count)
+	for id, count := range counts {
+		msg.Int("count-"+id, count)
 	}
 
 	msg.Msg("entity identified")

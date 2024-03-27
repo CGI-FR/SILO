@@ -71,9 +71,9 @@ func (d *Driver) Dump() error {
 			break
 		}
 
-		entity := NewEntity(d.config.includeList, d.writer, entryNode)
+		entity := NewEntity(d.config.includeList, entryNode)
 
-		if err := d.writer.Write(entryNode, entity.UUID()); err != nil {
+		if err := d.write(entryNode, entity.UUID()); err != nil {
 			return fmt.Errorf("%w", err)
 		}
 
@@ -95,13 +95,23 @@ func (d *Driver) dump(snapshot Snapshot, node DataNode, entity Entity) error {
 
 	for _, connectedNode := range connectedNodes {
 		if entity.Append(connectedNode) {
-			if err := d.writer.Write(connectedNode, entity.UUID()); err != nil {
+			if err := d.write(connectedNode, entity.UUID()); err != nil {
 				return fmt.Errorf("%w", err)
 			}
 
 			if err := d.dump(snapshot, connectedNode, entity); err != nil {
 				return fmt.Errorf("%w", err)
 			}
+		}
+	}
+
+	return nil
+}
+
+func (d *Driver) write(node DataNode, uuid string) error {
+	if _, included := d.config.include[node.Key]; included || len(d.config.include) == 0 {
+		if err := d.writer.Write(node, uuid); err != nil {
+			return fmt.Errorf("%w", err)
 		}
 	}
 
