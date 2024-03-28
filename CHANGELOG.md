@@ -17,6 +17,7 @@ Types of changes
 ## [0.3.0]
 
 - `Added` cpu and memory profiling with `--profiling mem|cpu` flag
+- `Fixed` performance issues on dump in exchange for higher RAM consumption, using `--limited-ram` flag will fall back to the 0.2.0 dump version
 
 ## [0.2.0]
 

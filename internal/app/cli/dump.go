@@ -29,8 +29,9 @@ import (
 
 func NewDumpCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.File) *cobra.Command {
 	var (
-		include []string
-		watch   bool
+		include    []string
+		watch      bool
+		limitedRAM bool
 	)
 
 	cmd := &cobra.Command{ //nolint:exhaustruct
@@ -39,7 +40,7 @@ func NewDumpCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.F
 		Example: "  " + parent + " dump clients",
 		Args:    cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			if err := dump(args[0], include, watch); err != nil {
+			if err := dump(args[0], include, watch, limitedRAM); err != nil {
 				log.Fatal().Err(err).Int("return", 1).Msg("end SILO")
 			}
 		},
@@ -47,6 +48,7 @@ func NewDumpCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.F
 
 	cmd.Flags().StringSliceVarP(&include, "include", "i", []string{}, "include only these columns, exclude all others")
 	cmd.Flags().BoolVarP(&watch, "watch", "w", false, "watch statistics about dumped entities in stderr")
+	cmd.Flags().BoolVar(&limitedRAM, "limited-ram", false, "limit RAM usage, slower but more efficient on RAM usage")
 
 	cmd.Flags().SortFlags = false
 
@@ -57,8 +59,18 @@ func NewDumpCommand(parent string, stderr *os.File, stdout *os.File, stdin *os.F
 	return cmd
 }
 
-func dump(path string, include []string, watch bool) error {
-	backend, err := infra.NewBackend(path)
+func dump(path string, include []string, watch bool, limitedRAM bool) error {
+	var (
+		backend silo.Backend
+		err     error
+	)
+
+	if limitedRAM {
+		backend, err = infra.NewBackend(path)
+	} else {
+		backend, err = infra.NewBackendFull(path)
+	}
+
 	if err != nil {
 		return fmt.Errorf("%w", err)
 	}
