@@ -42,33 +42,43 @@ func (b BackendFull) Snapshot() silo.Snapshot { //nolint:ireturn
 }
 
 type SnapshotFull struct {
-	db    *pebble.DB
-	nodes map[string][]byte
+	db     *pebble.DB
+	nodes  map[string][]byte
+	loaded bool
 }
 
 const DefaultFullMapCap = 1024
 
 func NewSnapshotFull(db *pebble.DB) silo.Snapshot { //nolint:ireturn
-	return SnapshotFull{
-		db:    db,
-		nodes: make(map[string][]byte, DefaultFullMapCap),
-	}.Load()
+	return &SnapshotFull{
+		db:     db,
+		nodes:  make(map[string][]byte, DefaultFullMapCap),
+		loaded: false,
+	}
 }
 
-func (s SnapshotFull) Load() SnapshotFull {
+func (s *SnapshotFull) Load() error {
 	iter, err := s.db.NewIter(&pebble.IterOptions{}) //nolint:exhaustruct
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("%w", err)
 	}
 
 	for iter.First(); iter.Valid(); iter.Next() {
 		s.nodes[string(iter.Key())] = iter.Value()
 	}
 
-	return s
+	s.loaded = true
+
+	return nil
 }
 
-func (s SnapshotFull) Next() (silo.DataNode, bool, error) {
+func (s *SnapshotFull) Next() (silo.DataNode, bool, error) {
+	if !s.loaded {
+		if err := s.Load(); err != nil {
+			return silo.DataNode{Key: "", Data: ""}, false, err
+		}
+	}
+
 	for key := range s.nodes {
 		node, err := decodeKey([]byte(key))
 		if err != nil {
@@ -81,7 +91,7 @@ func (s SnapshotFull) Next() (silo.DataNode, bool, error) {
 	return silo.DataNode{Key: "", Data: ""}, false, nil
 }
 
-func (s SnapshotFull) PullAll(node silo.DataNode) ([]silo.DataNode, error) {
+func (s *SnapshotFull) PullAll(node silo.DataNode) ([]silo.DataNode, error) {
 	key, err := node.Binary()
 	if err != nil {
 		return nil, fmt.Errorf("%w", err)
@@ -102,6 +112,6 @@ func (s SnapshotFull) PullAll(node silo.DataNode) ([]silo.DataNode, error) {
 	return set, nil
 }
 
-func (s SnapshotFull) Close() error {
+func (s *SnapshotFull) Close() error {
 	return nil
 }
