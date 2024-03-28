@@ -14,6 +14,10 @@ Types of changes
 - `Fixed` for any bug fixes.
 - `Security` in case of vulnerabilities.
 
+## [0.3.0]
+
+- `Added` cpu and memory profiling with `--profiling mem|cpu` flag
+
 ## [0.2.0]
 
 - `Added` flag `--include` (short `-i`) to only scan/dump a specific list of fields, this flag is repeatable

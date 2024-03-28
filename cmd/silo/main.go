@@ -25,6 +25,7 @@ import (
 
 	"github.com/cgi-fr/silo/internal/app/cli"
 	"github.com/mattn/go-isatty"
+	"github.com/pkg/profile"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -42,17 +43,19 @@ var (
 	jsonlog   bool   //nolint: gochecknoglobals
 	debug     bool   //nolint: gochecknoglobals
 	colormode string //nolint: gochecknoglobals
-	profiling bool   //nolint: gochecknoglobals
+	profiling string //nolint: gochecknoglobals
 )
 
 func main() {
+	var profiler interface{ Stop() }
+
 	cobra.OnInitialize(initLog)
 
 	rootCmd := &cobra.Command{ //nolint:exhaustruct
 		Use:     name,
 		Short:   "Sparse Input Linked Output",
-		Long:    `SILO is a purpose-built tool designed for ...`,
-		Example: `TODO`,
+		Long:    `SILO ingest data from stdin and isolate entites (which are groups of related values) into a file.`,
+		Example: "  silo scan my-silo < data.jsonl\n  silo dump my-silo -w > entities.jsonl",
 		Version: fmt.Sprintf(`%v (commit=%v date=%v by=%v)
 Copyright (C) 2024 CGI France
 License GPLv3: GNU GPL version 3 <https://gnu.org/licenses/gpl.html>.
@@ -65,9 +68,19 @@ There is NO WARRANTY, to the extent permitted by law.`, version, commit, buildDa
 				Bool("debug", debug).
 				Str("color", colormode).
 				Msg("start SILO")
+
+			if profiling == "cpu" {
+				profiler = profile.Start(profile.CPUProfile, profile.ProfilePath("."), profile.Quiet)
+			} else if profiling == "memory" || profiling == "mem" {
+				profiler = profile.Start(profile.MemProfile, profile.ProfilePath("."), profile.Quiet)
+			}
 		},
 		PersistentPostRun: func(_ *cobra.Command, _ []string) {
 			log.Info().Int("return", 0).Msg("end SILO")
+
+			if profiling == "cpu" || profiling == "memory" || profiling == "mem" {
+				profiler.Stop()
+			}
 		},
 	}
 
@@ -76,15 +89,13 @@ There is NO WARRANTY, to the extent permitted by law.`, version, commit, buildDa
 	rootCmd.PersistentFlags().BoolVar(&debug, "debug", false, "add debug information to logs (very slow)")
 	rootCmd.PersistentFlags().BoolVar(&jsonlog, "log-json", false, "output logs in JSON format")
 	rootCmd.PersistentFlags().StringVar(&colormode, "color", "auto", "use colors in log outputs : yes, no or auto")
-	rootCmd.PersistentFlags().BoolVar(&profiling, "profiling", false, "enable cpu profiling and generate a cpu.pprof file")
+	rootCmd.PersistentFlags().StringVar(&profiling, "profiling", "",
+		"create a pprof file - use 'cpu' to create a CPU pprof file or 'mem' to create an memory pprof file")
 
 	scanCmd := cli.NewScanCommand(name, os.Stderr, os.Stdout, os.Stdin)
 	dumpCmd := cli.NewDumpCommand(name, os.Stderr, os.Stdout, os.Stdin)
 
-	rootCmd.AddGroup(&cobra.Group{
-		ID:    "main",
-		Title: "Main Commands:",
-	})
+	rootCmd.AddGroup(&cobra.Group{ID: "main", Title: "Main Commands:"})
 
 	scanCmd.GroupID = "main"
 	dumpCmd.GroupID = "main"
