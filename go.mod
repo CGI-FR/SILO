@@ -6,12 +6,15 @@ require (
 	github.com/cockroachdb/pebble v1.1.0
 	github.com/goccy/go-json v0.10.2
 	github.com/mattn/go-isatty v0.0.20
+	github.com/pkg/profile v1.7.0
 	github.com/rs/zerolog v1.28.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
 )
 
 require (
+	github.com/felixge/fgprof v0.9.3 // indirect
+	github.com/google/pprof v0.0.0-20211214055906-6f57359322fd // indirect
 	github.com/mitchellh/colorstring v0.0.0-20190213212951-d06e56a500db // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	golang.org/x/term v0.17.0 // indirect
