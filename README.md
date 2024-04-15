@@ -117,6 +117,11 @@ $ silo dump my-silo
 
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
+## Contributors
+
+* CGI France ✉[Contact support](mailto:LINO.fr@cgi.com)
+* BGPN - Groupe La Poste
+
 ## License
 
 Copyright (C) 2024 CGI France
